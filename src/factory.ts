@@ -58,7 +58,7 @@ export function processElement(
         return widget.createTextNode(component);
     }
 
-    if (typeof component === 'function') {
+    /*if (typeof component === 'function') {
         const [proxy, exec] = component();
         proxy.$listener.onValue((data: any)=> {
             exec()
@@ -66,7 +66,7 @@ export function processElement(
         proxy.parent = component.parent
         component = proxy;
     }
-    console.log(component instanceof State, component);
+    console.log(component instanceof State, component);*/
     
     if (component instanceof State) {
         component.$listener.onValue((data: any) => {

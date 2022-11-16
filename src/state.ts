@@ -21,9 +21,17 @@ export function rerun<T extends object>(nameFunc: string, params: any[], proxy: 
 }
 
 export class State<T> {
-    parent: IComponentGeneral;
-
     #listener = new Listeners(State.nameEvent);
+
+    private _parent: IComponentGeneral;
+
+    set parent(parent: IComponentGeneral)  {
+        this._parent = parent;
+    }
+
+    get parent(): IComponentGeneral {
+        return this._parent;
+    }
 
     public get data(): any {
         return this.#listener.value;
@@ -62,7 +70,7 @@ export class State<T> {
                     if (typeof result !== "undefined") {
                         this.updateData(result);
                     }
-
+                    return proxy
                     return <T>rerun.bind(this, name, args, proxy);
                 };
         } catch (error) {
@@ -101,6 +109,10 @@ export function useState<T>(data: T): [T, (data: T) => any] {
             return State.prototype;
         },
     });
+
+    state.$listener.onValue(data => {
+        console.log(data, state.$listener);
+    })
 
     return [
         proxy as T,
