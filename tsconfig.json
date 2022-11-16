@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "target": "ESNext",
+        "jsx": "react",
+        "jsxFactory": "Reactive.createElement",
+        "jsxFragmentFactory": "Reactive.Fragment",
+        "lib": ["DOM", "ESNext"],
+        "typeRoots": ["test/views/types"],
+        "paths": {
+            "jsx/*": ["src/*"]
+        },
+        "types": ["string-tocapitalize"]
+    }
+}

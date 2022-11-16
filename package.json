@@ -1,0 +1,31 @@
+{
+  "name": "reactive",
+  "version": "1.0.0",
+  "description": "inspirado en react pero una implementacion mas sencilla",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "string-tocapitalize": "github:everskyblue/string-toCapitalize"
+  },
+  "devDependencies": {
+    "vite": "^3.0.2"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/everskyblue/reactive.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/everskyblue/reactive/issues"
+  },
+  "homepage": "https://github.com/everskyblue/reactive#readme"
+}
