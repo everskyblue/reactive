@@ -1,7 +1,6 @@
 import { resolve } from "path";
-import { defineConfig } from "vite";
 
-export default defineConfig({
+export default {
     root: resolve(__dirname, 'test'),
     resolve: {
         alias: {
@@ -12,4 +11,4 @@ export default defineConfig({
         jsxFactory: "Reactive.createElement",
         jsxFragment: "Reactive.Fragment",
     }
-});
+};

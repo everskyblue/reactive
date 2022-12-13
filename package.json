@@ -13,7 +13,7 @@
     "vite": "^3.0.2"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview"
   },
