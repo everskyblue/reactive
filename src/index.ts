@@ -1,22 +1,12 @@
-import { ComponentDOM } from "./ComponentDOM";
-import { ComponentFragment } from "./ComponentFragment";
-import { ComponentJSX } from "./ComponentJSX";
-import {
-    TCallbackComponent,
-    TReturnComponent,
-    TChildrenComponent,
-    PropParam,
-    TPrimitive,
-    DComponentDOM,
-    DComponentJSX,
-} from "./contracts";
-import IComponent from "./contracts/IComponent";
+import { ComponentDOM } from "./wrapper/ComponentDOM";
+import { ComponentFragment } from "./wrapper/ComponentFragment";
+import { ComponentJSX } from "./wrapper/ComponentJSX";
 import IComponentDOM from "./contracts/IComponentDOM";
 import IComponentFragment from "./contracts/IComponentFragment";
 import IComponentJSX from "./contracts/IComponentJSX";
 import { CallbackComponent, IComponentGeneral, IGeneral, IObjectGeneral } from "./contracts/IElement";
 import { factory, setObjectCreateElement } from "./factory";
-import { Listeners } from "./Listeners";
+import AbstractComponent from "./wrapper/AbstractComponent";
 
 export { setObjectCreateElement };
 
@@ -33,14 +23,14 @@ export default class Reactive {
         tag: IObjectGeneral | CallbackComponent,
         attrs: Pick<string, any> | null,
         ...children: IGeneral[]
-    ): IComponentGeneral {
+    ): AbstractComponent {
         const props = attrs ?? {};
         if (typeof tag === "function") {
             if (tag.toString() === Reactive.Fragment.toString()) {
                 //@ts-ignore
                 return tag({ children }) as IComponentFragment;
             }
-            return new ComponentJSX(tag, { props, children });
+            return new ComponentJSX(tag, props, children);
         }
 
         return new ComponentDOM(tag as string, props, children);

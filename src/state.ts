@@ -1,31 +1,72 @@
+import IComponentFragment from "./contracts/IComponentFragment";
 import { IComponentGeneral } from "./contracts/IElement";
+import IState from "./contracts/IState";
 import { Listeners } from "./Listeners";
+import render from "./render";
+import AbstractComponent from "./wrapper/AbstractComponent";
 
+export class State<T> implements IState {
+    id: number = 0;
 
-rerun.parent = null;
-/**
- * @memberof State
- * @param nameFunc 
- * @param params 
- * @param proxy 
- * @returns 
- */
-export function rerun<T extends object>(nameFunc: string, params: any[], proxy: T): [ProxyHandler<T>, ()=> any] {
-    return [proxy, ()=> {
-        const nwVal = this.$listener.value[nameFunc](...params);
-        //this.$listener.value = nwVal; 
-        console.log(nwVal);
-        
-        return nwVal;
-    }];
-}
-
-export class State<T> {
     #listener = new Listeners(State.nameEvent);
+
+    #register_fn = new Map();
 
     private _parent: IComponentGeneral;
 
-    set parent(parent: IComponentGeneral)  {
+    constructor(data: T) {
+        this.updateData(data);
+    }
+
+    toString = () => {
+        if (this.#register_fn.size > 0) {
+            this.#register_fn.values().next().value;
+        }
+        return this.$listener.value;
+    };
+
+    callMethodOfValue(nameFunc: string, params: any[]): any | any[] {
+        return this.$listener.value[nameFunc](...params);
+    }
+
+    getContext = () => {
+        return this;
+    };
+
+    updateData(value: T | T[]): Listeners {
+        this.$listener.value = value;
+        return this.$listener;
+    }
+
+    callMethods(name: string, proxy: Required<State<T>>) {
+        if (name in this) {
+            return this[name];
+        }
+
+        try {
+            const data = this.data[name];
+            if (typeof data === "function") {
+                return (...args: any[]) => {
+                    this.#register_fn.set(name, args);
+                    this.#listener.value = this.callMethodOfValue(name, args);
+                    return proxy;
+                };
+            }
+            return data;
+        } catch (error) {
+            console.log("check error", error);
+        }
+    }
+
+    get $listener(): Listeners {
+        return this.#listener;
+    }
+
+    get getFn() {
+        return this.#register_fn;
+    }
+
+    set parent(parent: IComponentGeneral) {
         this._parent = parent;
     }
 
@@ -33,93 +74,70 @@ export class State<T> {
         return this._parent;
     }
 
+    public get value(): string {
+        return this.toString();
+    }
+
     public get data(): any {
-        return this.#listener.value;
+        return this.$listener.value;
     }
 
-    callMethodOfValue(nameFunc: string, params: any[]): any | any[] {
-        return this.#listener.value[nameFunc](...params);
-    }
-
-    getContext = () => {
+    
+    public get context() : State<T> {
         return this;
-    };
-
-    constructor(data: T) {
-        this.updateData(data);
     }
-
-    updateData(value: T | T[]): Listeners {
-        this.#listener.value = value;
-        return this.#listener;
-    }
-
-    callMethods(name: string, proxy: Required<State<T>>) {
-        //console.log(name);
-        
-        try {
-            if (name === "value") return this.#listener.value;
-            if (name === "getContext") return this.getContext;
-            if (name === "parent") return this.parent;
-            if (name === "$listener") return this.#listener;
-            if (name === "toString") return () => this.#listener.value;
-            if (typeof this.data[name] === "function")
-                return (...args: any[]) => {
-                    const result = this.callMethodOfValue(name, args);
-                    
-                    if (typeof result !== "undefined") {
-                        this.updateData(result);
-                    }
-                    return proxy
-                    return <T>rerun.bind(this, name, args, proxy);
-                };
-        } catch (error) {
-            console.error(error);
-        }
-        return this.data[name];
-    }
-
-    get $listener(): Listeners {
-        return this.#listener;
-    }
+    
 
     static get nameEvent(): string {
         return "value";
     }
 }
 
-export function useState<T>(data: T): [T, (data: T) => any] {
-    const state = new State<T>(data);
-    const proxy = new Proxy(state, {
+export function useState<T>(
+    data: T,
+    context: IComponentGeneral
+): [T, (data: T) => any] {
+    const state: State<T> = new State<T>(data);
+    const nwProxy = new Proxy(state, {
         get(target: State<T>, name: string, values: any) {
-            //@ts-ignore if (Symbol.toPrimitive === name)
-            //console.log(name, arguments);
-
             return target.callMethods(name, proxy);
         },
 
-        set(target: State<T>, name: string, component: IComponentGeneral) {
-            if (name === "parent") {
-                state.parent = component;
-            }
-            return this;
+        set(target, property: string, value) {
+            if (!(property in target))
+                throw new Error(`${property} does not exists`);
+            target[property] = value;
+            return true;
         },
 
         getPrototypeOf() {
             return State.prototype;
         },
     });
+    //console.log(data, state, context,context.state?.at(state.id));
+    
+    const proxy = context.state ? (context.state.at(state.id + 1) ?? nwProxy) : nwProxy;
 
-    state.$listener.onValue(data => {
-        console.log(data, state.$listener);
-    })
+    //console.log(state, context.state?.length, context.state?.at(state.id + 1));
+    if (!context.state) {
+        context.state = [proxy];
+    } else if (context.state && !context.state.includes(proxy)) {
+        proxy.id = context.state.at(-1).id + 1;
+        context.state.push(proxy);
+    }
 
-    return [
-        proxy as T,
-        function dispatcher(nwData: any) {
-            state.updateData(nwData).invoke(nwData);
-        },
-    ];
+    state.$listener.onValue((data) => {
+        console.log(data, state, render(context));
+    });
+
+    const value = context.state.at(-1) as T;
+    console.log(value);
+    
+    function dispatcher(nwData: any) {
+        state.updateData(nwData).invoke(nwData);
+    }
+
+    return [value, dispatcher];
 }
 
 export async function useEffect(fn: () => void) {

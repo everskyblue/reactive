@@ -1,7 +1,7 @@
 import { getParent } from "./add-parent";
-import { ComponentDOM } from "./ComponentDOM";
-import { ComponentFragment } from "./ComponentFragment";
-import { ComponentJSX } from "./ComponentJSX";
+import { ComponentDOM } from "./wrapper/ComponentDOM";
+import { ComponentFragment } from "./wrapper/ComponentFragment";
+import { ComponentJSX } from "./wrapper/ComponentJSX";
 import IComponentDOM from "./contracts/IComponentDOM";
 import IComponentJSX from "./contracts/IComponentJSX";
 import {
@@ -11,10 +11,15 @@ import {
     IGeneral,
     IObjectGeneral,
 } from "./contracts/IElement";
+import IState from "./contracts/IState";
 import { Listeners } from "./Listeners";
 import { State, rerun } from "./state";
+import IComponent from "./contracts/IComponent";
+import IComponentFragment from "./contracts/IComponentFragment";
+import render from "./render";
 
 let widget: ICreateElement;
+const storeState = new Set<IState>();
 
 function each(arr: IGeneral[], callback: (value: IGeneral, index: number)=>any) {
     for (let index = 0; index < arr.length; index++) {
@@ -22,17 +27,6 @@ function each(arr: IGeneral[], callback: (value: IGeneral, index: number)=>any) 
     }
 }
 
-function iterateChild(childs: IGeneral[]) {
-    each(childs, child => {
-        if (Array.isArray(child)) {
-            return iterateChild(child)
-        }
-
-        if (child instanceof State) {
-            
-        }
-    })
-}
 
 export function setObjectCreateElement(create: ICreateElement) {
     widget = create;
@@ -69,13 +63,29 @@ export function processElement(
     console.log(component instanceof State, component);*/
     
     if (component instanceof State) {
-        component.$listener.onValue((data: any) => {
+        console.log(component);
+        if (!storeState.has(component)) {
+            storeState.add(component);
+            
+            component.$listener.onValue((data: any) => {
+                //const parent: IComponentGeneral = (component as State<any>).parent as IComponentDOM;
+                //const nwResult: IObjectGeneral = processElement(parent) as IElement;
+                console.log(data, component.getFn);
+                for (const namefn of component.getFn.keys()) {
+                    const args = component.getFn.get(namefn);
+                    console.log(args, namefn, component.callMethodOfValue(namefn, args));
+                    
+                }
+                
+            })
+        }
+        /*component.$listener.onValue((data: any) => {
             const parent: IComponentGeneral = (component as State<any>).parent as IComponentDOM;
             const nwResult: IObjectGeneral = processElement(parent) as IElement;
             const parentID = getParent(parent)
             widget.append(parent.tagname, parentID.id, nwResult);
-        });
-        return resolveProxyValue(component.toString());
+        });*/
+        return component.toString();
     }
     if (component instanceof ComponentDOM) {
         return factoryDOM(component);
@@ -105,11 +115,24 @@ export function factoryDOM(component: IComponentDOM): IElement {
             e.setAttribute(key, valueProp);
         }
     }
+    
+    each(component.children, (child, index) => {
+        const dom = processElement(child);
+        if (Array.isArray(dom)) {
+            each(dom, (jsxprocessor, index) => {
+                const dom = processElement(jsxprocessor);
+                e.append(dom as any);
+            })
+        } else {
+            component.resultNode = dom as IElement;
+            e.append(dom as any);
+        }
+    })
 
-    for (const child of component.children) {
+    /*for (const child of component.children) {
         const node = processElement(child) as unknown as IElement;
         (Array.isArray(node) ? e.append(...node) : e.append(node));
-    }
+    }*/
 
     return e;
 }
@@ -129,5 +152,5 @@ export function factoryFragment(
 export function factory(
     component: IComponentGeneral | IComponentGeneral[]
 ): IObjectGeneral | IObjectGeneral[] {
-    return processElement(component);
+    return render(component, widget) as any;
 }

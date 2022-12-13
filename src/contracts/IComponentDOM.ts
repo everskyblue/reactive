@@ -3,8 +3,7 @@ import { IGeneral } from "./IElement";
 
 interface IComponentDOM extends IComponent {
     tagname: string
-    attrs: Record<string, any>,
-    children: IGeneral[]
+    attrs: Record<string, any>
 }
 
 export default IComponentDOM;

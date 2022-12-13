@@ -4,12 +4,12 @@ import { CallbackComponent, IComponentGeneral, IGeneral, IObjectGeneral, ParamsJ
 interface IComponentJSX extends IComponent {
     readonly id: number;
     data: any;
-    state: any;
-    component: CallbackComponent
+    state: any | any[];
+    /*component: CallbackComponent
     params: ParamsJSX
 
     useEffect(): PromiseLike<any>
-    existsUseEffect(): boolean
+    existsUseEffect(): boolean*/
     invokeComponent(): IComponentGeneral | IComponentGeneral[]
 }
 

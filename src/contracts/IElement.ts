@@ -32,7 +32,9 @@ export type IComponentGeneral = IComponentDOM | IComponentJSX | IComponentFragme
 
 export type IGeneral = IObjectGeneral | IComponentGeneral | ProxyFunction;
 
-export type CallbackComponent = (props: Pick<string, any> & {children: IGeneral[]}) => IComponentGeneral | IComponentGeneral[];
+export type PropertiesComponent = Pick<string, any> & {children: IGeneral[]};
+
+export type CallbackComponent = (props: PropertiesComponent) => IComponentGeneral | IComponentGeneral[];
 
 interface ProxyFunction {
     (...args: string[]): [Required<State<any>>, rerun];
