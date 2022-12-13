@@ -1,7 +1,7 @@
 import Reactive from "jsx/index";
 import { useEffect, useState } from "jsx/state";
 import { StateComponent } from "jsx/StateComponent";
-import { TUseProp } from "../../jsx/contracts";
+import { TUseProp } from "jsx/contracts";
 import { adapterJsonplaceholder } from "./adapters/frontend";
 import Article from "./Article";
 /*
@@ -31,9 +31,15 @@ function Articles({ data }: TUseProp) {
 }
 */
 function Articles(params: any) {
-    const [articles, setArticles] = useState<adapterJsonplaceholder.TPost[]>([])
-    const [text, setText] = useState('presiona');
+    const [articles, setArticles] = useState<adapterJsonplaceholder.TPost[]>([{
+        body: 'articulo',
+        id: 1,
+        title: 'y titlee',
+        uuid: 145
+    }], this)
+    const [text, setText] = useState('presiona', this);
     //console.log(params, articles.toString(), setArticles);
+    //console.log(this);
     
     return (
         <section class="articles">

@@ -6,7 +6,7 @@ import type {ArticleProps} from './types'
 let uuid = 0;
 
 function Article({title, body, id}: ArticleProps & TUseProp) {
-    const [$title, setTitle] = useState(title)
+    const [$title, setTitle] = useState(title, this)
     
     return ( 
         <div class='article' 
