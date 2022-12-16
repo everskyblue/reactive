@@ -8,6 +8,7 @@ import IComponentJSX from "../contracts/IComponentJSX";
 import {
     CallbackComponent,
     IGeneral,
+    IObjectGeneral,
     ParamsJSX,
     PropertiesComponent,
 } from "../contracts/IElement";
@@ -15,6 +16,7 @@ import AbstractComponent from "./AbstractComponent";
 
 export class ComponentJSX extends AbstractComponent implements IComponentJSX {
     public data: any;
+    invokeChilds: any;
 
     /*useEffect() {
         if (typeof this.props.useEffect !== 'function') {
@@ -33,14 +35,14 @@ export class ComponentJSX extends AbstractComponent implements IComponentJSX {
     }
 
     invokeComponent() {
-        addParent(this, this.children);
         const childs = (this.jsxprocessor as CallbackComponent)({
             ...this.props,
             children: this.children,
         } as PropertiesComponent);
 
         addParent(this, Array.isArray(childs) ? childs : [childs]);
-
+        this.invokeChilds = childs as IObjectGeneral;
+        
         return childs;
     }
 

@@ -10,7 +10,8 @@ abstract class AbstractComponent implements IComponent {
     parent: IComponent;
     id: number;
     state: any[]
-
+    parentCallbackComponent: IComponent
+    
     constructor(public jsxprocessor: string | CallbackComponent, public props: Pick<string, any>, public children: IGeneral[]) {
         addParent(this, this.children);
     }

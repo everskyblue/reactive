@@ -25,6 +25,14 @@ export default class Reactive {
         ...children: IGeneral[]
     ): AbstractComponent {
         const props = attrs ?? {};
+/*
+        children.forEach((child, index) => {
+            if (!(child instanceof AbstractComponent || child instanceof ComponentFragment)) {
+                console.log(child);
+            }
+            
+        });
+*/
         if (typeof tag === "function") {
             if (tag.toString() === Reactive.Fragment.toString()) {
                 //@ts-ignore

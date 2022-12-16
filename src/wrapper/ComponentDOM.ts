@@ -7,6 +7,7 @@ import AbstractComponent from "./AbstractComponent";
 export class ComponentDOM extends AbstractComponent implements IComponentDOM {
     render(widget: ICreateElement): IElement {
         const e = this.resultNode = widget.createElement(this.tagname);
+        
         const childs = processor(this.children).flat(1);
         //console.log(e, this);
         
@@ -22,8 +23,7 @@ export class ComponentDOM extends AbstractComponent implements IComponentDOM {
             }
         }
         
-        addParent(this, childs);
-        
+        addParent(this, this.children);
         e.append(...childs)
 
         return e;

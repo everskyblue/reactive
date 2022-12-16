@@ -1,3 +1,4 @@
+import IComponent from "jsx/contracts/IComponent";
 import IComponentDOM from "jsx/contracts/IComponentDOM";
 import { addParent } from "../add-parent";
 import IComponentFragment from "../contracts/IComponentFragment";
@@ -8,9 +9,7 @@ export class ComponentFragment implements IComponentFragment {
     parent: any;
     id: number;
     resultNode: IElement
-
-    jsxprocessor: string | CallbackComponent;
-    props: Pick<string, any>;
+    parentCallbackComponent: IComponent
 
     constructor(public children: IGeneral[]) {
         if (children.some((child: any) => child instanceof ComponentFragment)) {

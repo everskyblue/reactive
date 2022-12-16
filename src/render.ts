@@ -1,5 +1,4 @@
 import { ICreateElement, IGeneral } from "./contracts/IElement";
-import { State } from "./state";
 import AbstractComponent from "./wrapper/AbstractComponent";
 import { ComponentFragment } from "./wrapper/ComponentFragment";
 
@@ -16,9 +15,7 @@ export function processor(jsx: IGeneral | IGeneral[]) {
         return render;
     } else if (Array.isArray(jsx)) {
         return jsx.map(processor)
-    } else if (jsx instanceof State && Array.isArray(jsx.value)) {
-        return jsx.value.map(processor);
-    }
+    } 
     return jsx;
 }
 

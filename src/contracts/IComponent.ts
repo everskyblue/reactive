@@ -3,6 +3,7 @@ import { CallbackComponent, ICreateElement, IElement, IGeneral } from "./IElemen
 interface IComponent {
     id: number
     state: any[]
+    parentCallbackComponent: IComponent
     parent: IComponent;
     resultNode: IElement;
     jsxprocessor: string | CallbackComponent

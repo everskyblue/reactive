@@ -31,39 +31,20 @@ function Articles({ data }: TUseProp) {
 }
 */
 function Articles(params: any) {
-    const [articles, setArticles] = useState<adapterJsonplaceholder.TPost[]>([{
-        body: 'articulo',
-        id: 1,
-        title: 'y titlee',
-        uuid: 145
-    }], this)
-    const [text, setText] = useState('presiona', this);
-    //console.log(params, articles.toString(), setArticles);
-    //console.log(this);
-    
+    const [articles, setArticles] = useState([], this);
+   
     return (
         <section class="articles">
-            <button
-                type="button"
-                onClick={(e) => {
-                    //setArticles(articles.slice(0, 3));
-                    setText('has hecho click')
-                    setArticles([{
-                        body: 'articulo',
-                        id: 1,
-                        title: 'y titlee',
-                        uuid: 145
-                    }])
-                }}
-            >
-                {text}
-            </button>
-            {articles.map<adapterJsonplaceholder.TPost>((val) => {
-                console.log(val);
-                
-                return <Article title={val.title} body={val.body} id={val.uuid} />
-            }
-            )}
+            <button type='button' onClick={() => {
+                fetch('https://jsonplaceholder.typicode.com/posts?userId=1')
+                .then(res => res.json())
+                .then(result => setArticles(result))
+            }}>cargar datos</button>
+            <div class="posts">
+                {
+                    articles.length === 0? 'no hay post cargados' : articles.map(post => <Article body={post.body} title={post.title} id={post.id}></Article>)
+                }
+            </div>
         </section>
     );
 }

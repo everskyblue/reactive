@@ -12,10 +12,6 @@ import {
     IObjectGeneral,
 } from "./contracts/IElement";
 import IState from "./contracts/IState";
-import { Listeners } from "./Listeners";
-import { State, rerun } from "./state";
-import IComponent from "./contracts/IComponent";
-import IComponentFragment from "./contracts/IComponentFragment";
 import render from "./render";
 
 let widget: ICreateElement;
@@ -42,7 +38,7 @@ function resolveProxyValue(value: IGeneral | IGeneral[]): IObjectGeneral | IObje
 }
 
 export function processElement(
-    component: IGeneral | IGeneral[] | Required<State<any>>
+    component: IGeneral | IGeneral[]
 ): IObjectGeneral | IObjectGeneral[] {
     if (
         typeof component === "boolean" ||
@@ -62,31 +58,6 @@ export function processElement(
     }
     console.log(component instanceof State, component);*/
     
-    if (component instanceof State) {
-        console.log(component);
-        if (!storeState.has(component)) {
-            storeState.add(component);
-            
-            component.$listener.onValue((data: any) => {
-                //const parent: IComponentGeneral = (component as State<any>).parent as IComponentDOM;
-                //const nwResult: IObjectGeneral = processElement(parent) as IElement;
-                console.log(data, component.getFn);
-                for (const namefn of component.getFn.keys()) {
-                    const args = component.getFn.get(namefn);
-                    console.log(args, namefn, component.callMethodOfValue(namefn, args));
-                    
-                }
-                
-            })
-        }
-        /*component.$listener.onValue((data: any) => {
-            const parent: IComponentGeneral = (component as State<any>).parent as IComponentDOM;
-            const nwResult: IObjectGeneral = processElement(parent) as IElement;
-            const parentID = getParent(parent)
-            widget.append(parent.tagname, parentID.id, nwResult);
-        });*/
-        return component.toString();
-    }
     if (component instanceof ComponentDOM) {
         return factoryDOM(component);
     } else if (component instanceof ComponentJSX) {
