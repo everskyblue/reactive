@@ -31,7 +31,12 @@ function Articles({ data }: TUseProp) {
 }
 */
 function Articles(params: any) {
-    const [articles, setArticles] = useState([], this);
+    const [articles, setArticles] = useState([{
+        "userId": 1,
+        "id": 5,
+        "title": "nesciunt quas odio",
+        "body": "repudiandae veniam quaerat sunt sed\nalias aut fugiat sit autem sed est\nvoluptatem omnis possimus esse voluptatibus quis\nest aut tenetur dolor neque"
+      }], this);
    
     return (
         <section class="articles">

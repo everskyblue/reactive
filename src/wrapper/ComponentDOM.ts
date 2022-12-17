@@ -24,6 +24,7 @@ export class ComponentDOM extends AbstractComponent implements IComponentDOM {
         }
         
         addParent(this, this.children);
+        //console.log(childs);
         e.append(...childs)
 
         return e;
