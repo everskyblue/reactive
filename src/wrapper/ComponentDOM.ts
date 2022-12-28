@@ -1,11 +1,18 @@
 import { addParent } from "jsx/add-parent";
 import IComponentDOM from "jsx/contracts/IComponentDOM";
 import { ICreateElement, IElement, IGeneral } from "jsx/contracts/IElement";
-import { processor } from "jsx/render";
+import { getCreatedWidget, processor } from "jsx/render";
+import { State } from "jsx/state";
 import AbstractComponent from "./AbstractComponent";
 
+
 export class ComponentDOM extends AbstractComponent implements IComponentDOM {
-    render(widget: ICreateElement): IElement {
+    render(): IElement {
+        this.children.forEach((child, index) => {
+            //console.log(child);
+            
+        });
+        const widget: ICreateElement = getCreatedWidget();
         const e = this.resultNode = widget.createElement(this.tagname);
         
         const childs = processor(this.children).flat(1);

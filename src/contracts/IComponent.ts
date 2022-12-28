@@ -9,6 +9,7 @@ interface IComponent {
     jsxprocessor: string | CallbackComponent
     props: Pick<string, any>
     children: IGeneral[]
+    invokeChilds?: IComponent
     render(widget?: ICreateElement): IGeneral | IGeneral[];
 }
 

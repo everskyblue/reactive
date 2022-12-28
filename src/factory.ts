@@ -123,5 +123,5 @@ export function factoryFragment(
 export function factory(
     component: IComponentGeneral | IComponentGeneral[]
 ): IObjectGeneral | IObjectGeneral[] {
-    return render(component, widget) as any;
+    return render(component) as any;
 }

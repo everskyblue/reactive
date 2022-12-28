@@ -4,12 +4,28 @@ export class ValueString extends String {
     constructor($value: string) {
         super($value)
     }
+
+    [Symbol.toPrimitive]() {
+        
+        return this;
+    }
+
+    toValue(): () => string {
+    
+        return () => {
+            console.log(this);
+            return this as any;
+        } 
+    }
 }
 
 export class ValueNumber extends Number {
     parent: any
     constructor($value: number) {
         super($value)
+    }
+    [Symbol.toPrimitive]() {
+        return this;
     }
 }
 
@@ -20,6 +36,9 @@ export class ValueArray extends Array {
             super(...$values)
         else 
             super($values)
+    }
+    [Symbol.toPrimitive]() {
+        return this;
     }
 
     static get [Symbol.species]() {
@@ -32,11 +51,17 @@ export class ValueObject extends Object {
     constructor($value: unknown) {
         super($value)
     }
+    [Symbol.toPrimitive]() {
+        return this;
+    }
 }
 
 export class ValueBoolean extends Boolean {
     parent: any
     constructor($value: boolean) {
         super($value)
+    }
+    [Symbol.toPrimitive]() {
+        return this;
     }
 }

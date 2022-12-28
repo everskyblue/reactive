@@ -1,9 +1,4 @@
-import IComponentFragment from "./contracts/IComponentFragment";
 import { IComponentGeneral } from "./contracts/IElement";
-import IState from "./contracts/IState";
-import { Listeners } from "./Listeners";
-import render from "./render";
-import AbstractComponent from "./wrapper/AbstractComponent";
 import {
     ValueArray,
     ValueBoolean,
@@ -11,8 +6,12 @@ import {
     ValueObject,
     ValueString,
 } from "./wrapper/ValueState";
+import proxyState, { ProxyState } from "./wrapper/ProxyState";
+import render from "./render";
+
 
 const state = new Map<number, Array<any>>();
+const fetchData = new Map<number, ()=> any>();
 
 export class State {
     recall: boolean = false;
@@ -49,16 +48,7 @@ export function useState<T>(
         throw new Error("value no valid");
     }
 
-    //-
-
-    let value:
-        | ValueArray
-        | ValueBoolean
-        | ValueNumber
-        | ValueObject
-        | ValueString = getValue(data);
-
-    let lastState: State;
+    let lastState: ProxyState;
 
     if (!state.has(context.id)) {
         state.set(context.id, []);
@@ -70,66 +60,55 @@ export function useState<T>(
         lastState = allState.find((state) => !state.recall);
         lastState.recall = true;
     } else {
-        const handler: ProxyHandler<any> = {
-            get(target: State, p: any, receiver) {
-                if (typeof data[p] === 'function') {
-                    return (...args: any[]) => {
-                        //target.nwValue = data[p](...args);
-                        return getValue(data[p](...args));
-                    }
-                }
-                
-                return p in target ? target[p] : p === Symbol.toPrimitive ? target : receiver;
-            },
-            getPrototypeOf() {
-                return State.prototype;
-            },
-        };
-    
-        //allState.push((lastState = new State(context, data)));
-        allState.push((lastState = new Proxy(value, handler)));
+        allState.push((lastState =  proxyState(data)));
     }
-
+    //console.log(lastState);
+    
     const dispatcher = (nwValue: unknown) => {
         lastState.update = true;
-        lastState.value = nwValue;
-
-        console.log(context, lastState);
+        lastState.value = typeof nwValue === 'function' ? nwValue() : nwValue;;
+        lastState.__data = lastState.value;
+        console.log(lastState, context);
         
-
-        const oldResultNode = context.resultNode;
-        const rerender = context.render();
+        if (!lastState.parent) {
+            let oldResultNode = context.resultNode;
+            context.render()
+            oldResultNode.parentNode.replaceChild(
+                context.resultNode,
+                oldResultNode
+            )
+        } else {
+            let oldResultNode = lastState.parent.resultNode;
+            lastState.parent.render();
+            oldResultNode.parentNode.replaceChild(
+                lastState.parent.resultNode,
+                oldResultNode
+            )
+        
+        }
 
         allState.forEach((state) => {
             state.recall = state.update = false;
         });
         
+        /*const oldResultNode = context.resultNode;
+        const rerender = context.render()
+
         console.log(
             rerender,
             oldResultNode.parentNode.replaceChild(
                 context.resultNode,
                 oldResultNode
             )
-        );
+        );*/
     };
 
     return [lastState as unknown as T, dispatcher];
 }
 
-export async function useEffect(fn: () => void) {
-    fn();
-}
-function getValue<T>(data: T): ValueArray | ValueBoolean | ValueNumber | ValueObject | ValueString {
-    if (Array.isArray(data)) {
-        return new ValueArray(data);
-    } else if (data instanceof Object) {
-        return new ValueObject(data);
-    } else if (typeof data === "string") {
-        return new ValueString(data);
-    } else if (typeof data === "number") {
-        return new ValueNumber(data);
-    } else if (typeof data === "boolean") {
-        return new ValueBoolean(data);
-    }
-}
 
+export function useFetch(callback: ()=> void, context: IComponentGeneral) {
+    if (fetchData.has(context.id)) return false;
+    fetchData.set(context.id, callback);
+    callback();
+}

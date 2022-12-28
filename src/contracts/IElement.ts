@@ -26,7 +26,7 @@ export type ParamsJSX = {
     children?: IGeneral[]
 }
 
-export type IObjectGeneral = IElement | string | number | boolean | ProxyHandler<State<any>> | Required<State<any>>;
+export type IObjectGeneral = IElement | string | number | boolean | ProxyHandler<State<any>>;
 
 export type IComponentGeneral = IComponentDOM | IComponentJSX | IComponentFragment;
 
