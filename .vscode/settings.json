@@ -1,3 +1,5 @@
 {
-    "explorer.autoReveal": false
+    "explorer.autoReveal": false,
+    "editor.linkedEditing": true,
+    "scm.autoReveal": false
 }
