@@ -1,17 +1,15 @@
-import {
+import type {
     IWidget,
+    IWidgetUpdate,
     ReactiveCreateElement,
     ReactiveCreateElementOfType,
+    StoreState,
     TypeElement,
-} from "./implements";
+} from "./implements.d";
 import { Execute } from "./useState";
 import { State } from "./State";
 
-// Exclude<TypeElement<TypeWidget>, boolean | number>
-
 let widgetCreate: IWidget;
-
-const types = ["string", "boolean", "number", "object"];
 
 function toArray<TypeWidget = any>(
     data:
@@ -40,50 +38,54 @@ export class Reactive {
         const def = {
             type,
             properties,
-            onUpdateState,
+            getParentNode,
             render: renderView,
         } as ReactiveCreateElement<TypeWidget>;
+
+        setParent(childs);
 
         if (typeof type === "string") {
             def.node = widgetCreate.createWidget(type);
             def.childs = childs;
             widgetCreate.setProperties(def.node, properties);
-            def.childs.forEach((child) => {
-                if (typeof child === "object" /*&& !child.parentNode*/) {
-                    setParent(child);
-                }
-            });
         } else if (typeof type === "function") {
             const child =
                 type.name === "Fragment"
                     ? type(childs)
                     : type.call(def, properties, childs);
-            if (Array.isArray(child)) child.forEach(setParent);
-            else setParent(child);
             def.childs = child;
+            setParent(Array.isArray(def.childs) ? def.childs : [def.childs]);
         }
 
-        function setParent(child: ReactiveCreateElement<TypeWidget>) {
-            child.parentNode = def; //.node ?? def.type;
+        function setParent(childs: any[]) {
+            childs.forEach((child) => {
+                if (typeof child === "object") {
+                    if (!child.parentNode) {
+                        child.parentNode = def;
+                    }
+                }
+            });
         }
 
         return def;
     }
 }
 
-function onUpdateState(state: any) {
-    return () => {
-        //
-    };
+function getParentNode() {
+    if (typeof this.node === "object") {
+        return this;
+    }
+    return getParent(this);
 }
 
 export function render<TypeWidget = any>(
     root: string,
     component: ReactiveCreateElement<TypeWidget>
 ) {
-    console.log(component);
     component.node = widgetCreate.querySelector(root);
     component.render();
+    console.log(component);
+
     return component;
 }
 
@@ -92,10 +94,9 @@ function renderDataState<TypeWidget = any>(
     parent: TypeWidget,
     state: State
 ) {
-    const cloneState = state.mapParentNode.get(ctx);
-    //console.log(cloneState);
-    if (Array.isArray(cloneState.nwdata) || Array.isArray(cloneState.data)) {
-        (cloneState.nwdata ?? cloneState.data).forEach(
+    const storeState = state.store.get(ctx);
+    if (Array.isArray(storeState.data) || Array.isArray(storeState.rendering)) {
+        (storeState.rendering ?? storeState.data).forEach(
             (def: ReactiveCreateElement<TypeWidget>) => {
                 widgetCreate.appendWidget(parent, def?.render() ?? def);
             }
@@ -108,54 +109,56 @@ function renderDataState<TypeWidget = any>(
 /** @this ReactiveCreateElement<TypeWidget> */
 function renderView<TypeWidget = any>(
     isUpdate?: boolean,
-    state?: State,
-    oldDataState?: any
+    storeState?: StoreState
 ) {
-    //console.log(this);
-
     if (isUpdate) {
-        if (!state.parentNode) {
-            state.parentNode = state.currentParentNode;
-        }
-
-        const p: ReactiveCreateElement<TypeWidget> =
+        const ctxParentNode: ReactiveCreateElement<TypeWidget> =
             typeof this.type === "function" ? getParent(this) : this;
-        const childs = toArray(p.childs);
+        const childs = toArray(ctxParentNode.childs);
         const findAllIndex: number[] = [];
 
+        // Find the matching indexes
         childs.forEach((child, index) => {
             if (
                 this === child ||
-                (child instanceof State && child.oldData === oldDataState)
+                (child instanceof State && child.data === storeState.data)
             ) {
-                findAllIndex.push(index)
+                findAllIndex.push(index);
             }
         });
 
-        findAllIndex.forEach(findIndex => {
+        findAllIndex.forEach((findIndex) => {
+            // get index
             const def = childs.at(findIndex);
+            // Generate an error if the state does not have an enveloping function
             throwerIfNotExecute(def);
-            
+            // info update
+            const updateInfo = {
+                isStringable: false,
+                node: ctxParentNode.node,
+                typeAction: storeState.TYPE_ACTION,
+                updateIndex: findIndex,
+            } as IWidgetUpdate<TypeWidget>;
+
             if (def instanceof State) {
-                widgetCreate.updateWidget(
-                    true,
-                    p.node,
-                    state,
-                    findIndex,
-                    childs.length
+                updateInfo.isStringable = true;
+                updateInfo.state = storeState.data;
+                updateInfo.totalChilds = childs.length;
+            } else if (typeof def.type == "function") {
+                /*const mapState = */
+                def.type(def.properties) as unknown as State;
+                updateInfo.state = storeState.rendering.map((def) =>
+                    def.render()
                 );
-            } else if (typeof def.type == 'function') {
-                const mapState = def.type(def.properties) as unknown as State;
-                const mapDataState = mapState.nwdata??mapState.data;
-                widgetCreate.updateWidget(
-                    false,
-                    p.node,
-                    mapDataState.map((def) => def.render()),
-                    findIndex,
-                    oldDataState.length
-                );
+                updateInfo.totalChilds = storeState.previousData.length;
+                setTimeout(() => {
+                    storeState.rendering = undefined;
+                }, 0);
+                /*const mapDataState = mapState.nwdata ?? mapState.data;
+                 */
             }
-            //console.log(findIndex, state)
+
+            widgetCreate.updateWidget(updateInfo);
         });
 
         return;
@@ -165,15 +168,12 @@ function renderView<TypeWidget = any>(
         (child: ReactiveCreateElement<TypeWidget>) => {
             const isState = child instanceof State;
 
-            if (isState) {
-                child.addListener(this, this.onUpdateState(state));
-            }
-
             if (typeof child === "object" && !isState) {
                 const { node } = getParent<TypeWidget>(child);
                 if (typeof child.node === "object") {
                     widgetCreate.appendWidget(node, child.node);
                 }
+
                 child.render();
             } else {
                 const parent = this.node ?? getParent<TypeWidget>(this).node;
@@ -205,22 +205,29 @@ function getParent<TypeWidget = any>(
     return parent;
 }
 
-function throwerIfNotExecute<TypeWidget = any>(def: ReactiveCreateElement<TypeWidget>) {
+function throwerIfNotExecute<TypeWidget = any>(
+    def: ReactiveCreateElement<TypeWidget>
+) {
     if (def instanceof State) {
         if (!isStringableState(def)) {
             throw new Error(
                 "the execution of a state without an executing function is only allowed if they are strings, numbers or boolean values"
             );
         }
-    } else if (typeof def.type === 'function' && def.type.name !== Execute.name) {
+    } else if (
+        typeof def.type === "function" &&
+        def.type.name !== Execute.name
+    ) {
         throw new Error("is not a [function Execute] ");
     }
 }
 
 function isStringableState(def: any) {
-    const data = def.data;
     if (Array.isArray(def.data)) {
-        return (def.data as any[]).some(data => typeof data === "object") === false;
+        return (
+            (def.data as any[]).some((data) => typeof data === "object") ===
+            false
+        );
     }
-    return ['string', 'number', 'boolean'].includes(typeof def.data);
+    return ["string", "number", "boolean"].includes(typeof def.data);
 }

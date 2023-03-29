@@ -1,37 +1,108 @@
 import { ReactiveCreateElement } from "./implements";
 
-export class State implements Record<string, any> {
-    //parentNode: ReactiveCreateElement<any> = undefined;
-    proxySelf: State;
+/**
+ * NEW STATE = CREATE
+ * STATE.SET = NEW
+ * STATE.APPEND = UPDATE
+ * Object.Function  Return view = PREPEND is priority
+ */
+export enum StateAction {
+    CREATE,
+    NEW,
+    UPDATE,
+    PREPEND,
+}
 
-    oldData: any = undefined;
+export class StoreState {
+    public rendering: ReactiveCreateElement<any>[];
+    private _current: any;
+    private store: any[] = [];
+    public parentNode: ReactiveCreateElement<any>;
 
-    nwdata: any = undefined;
-
-    currentParentNode: ReactiveCreateElement<any> = undefined;
-
-    private readonly _listParentNode: Set<ReactiveCreateElement<any>> = new Set();
-    private readonly _mapParentNode: Map<ReactiveCreateElement<any>, State> = new Map();
-
-    public get mapParentNode(): Map<ReactiveCreateElement<any>, State> {
-        return this._mapParentNode;
+    constructor(
+        data: any,
+        public TYPE_ACTION: StateAction = StateAction.CREATE
+    ) {
+        this.data = data;
     }
 
-    private listeners: Map<ReactiveCreateElement<any>, Function> = new Map();
+    public set data(v: any) {
+        const current = this.data;
+
+        if (
+            this.TYPE_ACTION === StateAction.NEW ||
+            this.TYPE_ACTION === StateAction.CREATE
+        ) {
+            this._current = v;
+        } else if (this.TYPE_ACTION === StateAction.UPDATE) {
+            this._current = v;
+        } else if (this.TYPE_ACTION === StateAction.PREPEND) {
+            this.rendering = v;
+        }
+
+        // not ReactiveCreateElement<any>[]
+        if (this.TYPE_ACTION !== StateAction.PREPEND) {
+            // So you can get the above data correctly and you can update the widget
+            if (this.TYPE_ACTION === StateAction.UPDATE) {
+                this.store.push([...current, ...this._current]);
+            } else {
+                this.store.push(this._current);
+            }
+        }
+    }
+
+    public get data(): any {
+        return this._current;
+    }
+
+    public get previousData(): any {
+        return this.store.at(this.store.indexOf(this.data) - 1);
+    }
+
+    toString() {
+        return this.data?.toString() ?? "";
+    }
+}
+
+export class State implements Record<string, any> {
+    proxySelf: State;
+
+    currentParentNode: ReactiveCreateElement<any>;
+
+    public currentStoreState: StoreState;
+
+    public store: Map<ReactiveCreateElement<any>, StoreState> = new Map();
 
     public get parentNode(): ReactiveCreateElement<any> {
         return this.currentParentNode;
     }
 
-    public set parentNode(v: ReactiveCreateElement<any>) {
-        this.currentParentNode = v;
-        this.mapParentNode.set(v, Object.assign({}, this));
+    public set parentNode(parent: ReactiveCreateElement<any>) {
+        this.currentParentNode = parent;
+
+        if (
+            typeof this.currentStoreState.parentNode !== "undefined" &&
+            this.currentStoreState.parentNode !== parent
+        ) {
+            this.currentStoreState = new StoreState(
+                this.currentStoreState.data
+            );
+        }
+
+        this.currentStoreState.parentNode = parent;
+        this.store.set(parent, this.currentStoreState);
     }
 
-    constructor(public data: any) { }
+    public get data(): any {
+        return this.currentStoreState.data;
+    }
 
-    addListener(contextParent: ReactiveCreateElement<any>, fun: Function) {
-        this.listeners.set(contextParent, fun);
+    public set data(v: any) {
+        this.currentStoreState.data = v;
+    }
+
+    constructor(data: any) {
+        this.currentStoreState = new StoreState(data);
     }
 
     addProxySelf(proxy: State) {
@@ -39,24 +110,34 @@ export class State implements Record<string, any> {
     }
 
     set(newValue: any) {
-        this.oldData = this.data;
-        this.data = newValue;
-        this.mapParentNode.forEach((state, parent) => parent.render(true, state, this.oldData)
-        );
+        this.currentStoreState.TYPE_ACTION = StateAction.NEW;
+        this.currentStoreState.data = newValue;
+        this.invokeNode();
+    }
+
+    append(values: any[]) {
+        this.currentStoreState.TYPE_ACTION = StateAction.UPDATE;
+        this.currentStoreState.data = values;
+        this.invokeNode();
+    }
+
+    invokeNode() {
+        this.store.forEach((storeState, ctx) => {
+            ctx.render(true, storeState);
+        });
     }
 
     $setReturnData(value: any) {
-        this.nwdata = value;
+        this.currentStoreState.TYPE_ACTION = StateAction.PREPEND;
+        this.currentStoreState.data = value;
+    }
+
+    is(value: any): boolean {
+        return this.currentStoreState.data === value;
     }
 
     toString() {
-        return this.getAndResetData()?.toString() ?? "";
-    }
-
-    private getAndResetData() {
-        const data = this.nwdata ?? this.data;
-        this.nwdata = undefined;
-        return data;
+        return this.currentStoreState.toString();
     }
 
     [Symbol.toPrimitive]() {
@@ -64,7 +145,7 @@ export class State implements Record<string, any> {
     }
 
     *[Symbol.iterator]() {
-        for (const iterator of this.data) {
+        for (const iterator of this.currentStoreState.data) {
             yield iterator;
         }
     }

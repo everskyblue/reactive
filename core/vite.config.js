@@ -4,7 +4,7 @@ export default {
     build: {
         target: "es2016",
         outDir: "dist",
-        minify: false,
+        minify: true,
         lib: {
             entry: resolve(__dirname, "index.ts"),
             name: "reactive",

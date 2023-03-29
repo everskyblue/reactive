@@ -1,19 +1,16 @@
-import { IWidget, TextWidget } from "./implements";
-import { State } from "./State";
+import type { IWidget, TextWidget } from "./implements";
+import { State, StateAction } from "./State";
 
-//const TextExtend = globalThis.Text ? globalThis.Text : String;
-
-class TextMain extends Text {
+export class ReactiveText extends Text {
     constructor(text: any) {
-        super(text)
+        super(text);
     }
-    
-    public get text() : string {
+
+    public get text(): string {
         return this.data;
     }
-    
-    
-    public set text(v : string) {
+
+    public set text(v: string) {
         this.data = v;
     }
 }
@@ -23,18 +20,26 @@ export const createWidget: IWidget<HTMLElement> = {
         widget.textContent = str;
     },
     createText: function (str: string) {
-        return new TextMain(str);
+        return new ReactiveText(str);
     },
     createWidget: function (type: string): HTMLElement {
         return document.createElement(type);
     },
-    appendWidget: function (parent: HTMLElement, childWidget: HTMLElement | HTMLElement[]): void {
-        parent.append(...(Array.isArray(childWidget) ? childWidget : [childWidget]));
+    appendWidget: function (
+        parent: HTMLElement,
+        childWidget: HTMLElement | HTMLElement[]
+    ): void {
+        parent.append(
+            ...(Array.isArray(childWidget) ? childWidget : [childWidget])
+        );
     },
-    setProperties: function (parent: HTMLElement, props: Record<string, any>): void {
+    setProperties: function (
+        parent: HTMLElement,
+        props: Record<string, any>
+    ): void {
         for (const key in props) {
             const value = props[key];
-            if (key.startsWith('on')) {
+            if (key.startsWith("on")) {
                 parent.addEventListener(key.slice(2).toLowerCase(), value);
             } else {
                 parent.setAttribute(key, String(value));
@@ -44,27 +49,39 @@ export const createWidget: IWidget<HTMLElement> = {
     querySelector(selector: string) {
         return document.querySelector(selector);
     },
-    updateWidget: function (isStringable: boolean, node: HTMLElement, state: State & any, updateIndex: number, totalChilds: number): void {
-        const childNodes = node.childNodes;
-        const element = childNodes.item(updateIndex) as any;
+    updateWidget: function (info): void {
+        const childNodes = info.node.childNodes;
+        const element = childNodes.item(info.updateIndex) as any;
+        const previous = element?.previousSibling;
 
-        if (isStringable) {
-            element.data = state.proxySelf;
-        } else {
-            const elements = Array.from(childNodes).slice(updateIndex);
-            console.log(state);
-            
-            if (childNodes.length === 0) {
-                node.append(...state);
-            } else {
-                element.before(...state);
-            }
+        if (info.isStringable) {
+            return (element.data = info.state);
+        }
+        
+        const elements = Array.from(childNodes)
+            .slice(info.updateIndex)
+            .slice(0, info.totalChilds);
+        const next = elements.at(-1)?.nextSibling;
+
+        if (info.typeAction === StateAction.NEW) {
             for (let position = 0; position < elements.length; position++) {
-                if (position > totalChilds) break;
                 elements[position].remove();
             }
-        }
+            if (childNodes.length === 0 || (!element && !previous && !next)) {
+                return info.node.append(...info.state);
+            }
 
-        //console.log(element);
-    }
-}
+            if (element.parentNode) {
+                return element.before(...info.state);
+            }
+
+            if (next && !element.parentNode) {
+                return next.before(...info.state);
+            }
+
+            previous.after(...info.state);
+        } else if (info.typeAction === StateAction.UPDATE) {
+            info.node.append(...info.state);
+        }
+    },
+};
