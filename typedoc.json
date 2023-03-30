@@ -1,0 +1,12 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+    "entryPoints": ["./core/index.ts"],
+    "darkHighlightTheme": "material-theme-darker",
+    "exclude": [
+        "example/**/*",
+        "core/src/jsx-runtime/**/*",
+        "node_modules",
+        "idocs/**/*"
+    ],
+    "out": "docs"
+}
