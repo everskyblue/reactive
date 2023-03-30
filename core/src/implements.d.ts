@@ -1,11 +1,18 @@
 export type TextWidget = { text: any } & Record<string, any>;
 
+/**
+ * tipos de datos de que puede tener el arbol de component
+ */
 export type TypeElement<AnyWidget = any> =
     | string
     | boolean
     | number
     | AnyWidget;
 
+/**
+ * parametros que recibe cuando el estado cambia de valor
+ * controla cada elemento si se añade o se elimina del vista
+ */
 export interface IWidgetUpdate<TypeWidget> {
     isStringable: boolean;
     node: TypeWidget;
@@ -15,6 +22,10 @@ export interface IWidgetUpdate<TypeWidget> {
     totalChilds: number;
 }
 
+/**
+ * interface para el manejo y controlar de la aplicacion
+ * se llama cuando se va a renderizar el component
+ */
 export interface IWidget<TypeWidget = any> {
     setText(widget: TypeWidget, str: string): void;
     createText(str: string): TypeWidget | Text;
@@ -28,6 +39,9 @@ export interface IWidget<TypeWidget = any> {
     updateWidget(updateInfo: IWidgetUpdate<TypeWidget>): void;
 }
 
+/**
+ * type de valores de las etiquetas jsx
+ */
 export type ReactiveCreateElementOfType<AnyWidget> = 
     string
     | ((
@@ -36,6 +50,9 @@ export type ReactiveCreateElementOfType<AnyWidget> =
           | ReactiveCreateElement<AnyWidget>
           | ReactiveCreateElement<AnyWidget>[]);//TypeElement<AnyWidget> | TypeElement<AnyWidget>[]
 
+/**
+ * arbol de informacion jsx
+ */
 export interface ReactiveCreateElement<AnyWidget> {
     type: ReactiveCreateElementOfType<AnyWidget>;
     node: AnyWidget;
@@ -48,6 +65,9 @@ export interface ReactiveCreateElement<AnyWidget> {
     getParentNode(): () => AnyWidget;
 }
 
+/**
+ * tipos de estados 
+ */
 export declare enum StateAction {
     CREATE = 0,
     NEW = 1,
@@ -55,6 +75,9 @@ export declare enum StateAction {
     PREPEND = 3,
 }
 
+/**
+ * almacena cada actualizacion de estado
+ */
 export class StoreState {
     TYPE_ACTION: StateAction;
     rendering: ReactiveCreateElement<any>[];
@@ -66,6 +89,10 @@ export class StoreState {
     get data(): any;
     get previousData(): any;
 }
+
+/**
+ * controla el estado y la vista
+ */
 export class State implements Record<string, any> {
     data: any;
     ACTION_TYPE: StateAction;

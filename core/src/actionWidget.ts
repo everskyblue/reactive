@@ -1,5 +1,5 @@
 import type { IWidget, TextWidget } from "./implements";
-import { State, StateAction } from "./State";
+import { StateAction } from "./State";
 
 export class ReactiveText extends Text {
     constructor(text: any) {

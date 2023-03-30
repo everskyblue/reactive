@@ -24,12 +24,24 @@ export function addWidget(widget: IWidget) {
 }
 
 export class Reactive {
+    /**
+     *
+     * @param elements tree childs
+     * @returns array TypeElement<TypeWidget>[]
+     */
     static Fragment<TypeWidget = any>(
         elements: TypeElement<TypeWidget>[]
     ): TypeElement<TypeWidget>[] {
         return elements;
     }
 
+    /**
+     *
+     * @param type type element
+     * @param properties properties received
+     * @param childs tree childs
+     * @returns
+     */
     static createElement<TypeWidget = any>(
         type: ReactiveCreateElementOfType<TypeWidget>,
         properties: Record<string, any>,

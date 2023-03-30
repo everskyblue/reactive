@@ -2,8 +2,11 @@ import { ReactiveCreateElement } from "./implements";
 
 /**
  * NEW STATE = CREATE
+ * 
  * STATE.SET = NEW
+ * 
  * STATE.APPEND = UPDATE
+ * 
  * Object.Function  Return view = PREPEND is priority
  */
 export enum StateAction {

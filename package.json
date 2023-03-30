@@ -1,31 +1,40 @@
 {
-  "name": "reactive",
-  "version": "1.0.0-beta.1",
-  "description": "inspirado en react pero una implementacion mas sencilla",
-  "main": "index.js",
-  "directories": {
-    "example": "example"
-  },
-  "dependencies": {
-    "string-tocapitalize": "1.0.0"
-  },
-  "devDependencies": {
-    "vite": "^3.0.2"
-  },
-  "scripts": {
-    "dev": "vite --host",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/everskyblue/reactive.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/everskyblue/reactive/issues"
-  },
-  "homepage": "https://github.com/everskyblue/reactive#readme"
+    "name": "reactive",
+    "version": "1.0.0-beta.1",
+    "description": "inspired by react but a simpler implementation.",
+    "main": "dist/reactive.umd.js",
+    "module": "dist/reactive.mjs",
+    "directories": {
+        "docs": "docs",
+        "dist": "dist"
+    },
+    "devDependencies": {
+        "vite": "^3.0.2"
+    },
+    "scripts": {
+        "dev": "vite -c vite.config.init.js --host",
+        "build": "vite -c vite.config.init.js build",
+        "preview": "vite preview",
+        "build-core": "vite -c vite.config.build.js build",
+        "generate-docs": "typedoc --tsconfig core/tsconfig.json"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/everskyblue/reactive.git"
+    },
+    "keywords": [
+        "reactive",
+        "jsx",
+        "tsx",
+        "components",
+        "react",
+        "dom",
+        "agnostic"
+    ],
+    "author": "hicode",
+    "license": "BSD 3-CLAUSE",
+    "bugs": {
+        "url": "https://github.com/everskyblue/reactive/issues"
+    },
+    "homepage": "https:///everskyblue.github.io/reactive"
 }

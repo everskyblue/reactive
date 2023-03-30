@@ -17,5 +17,5 @@
         "declarationDir": "./types"
     },
     "exclude": ["node_modules"],
-    "include": ["example/**/*", "example/.src/test/**/*", "example/*", "core/**/*"]
+    "include": ["example/**/*", "example/.src/test/**/*", "example/*", "core/**/*", "vite.config.build.js"]
 }

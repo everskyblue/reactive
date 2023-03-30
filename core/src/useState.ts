@@ -5,6 +5,7 @@ export type ExecuteReceivedProps<T = any> = {
     state: State & T;
     /**
      * recibe cualquier valor
+     *
      * receives any value
      */
     option?: any;
