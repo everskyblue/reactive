@@ -42,13 +42,13 @@ export interface IWidget<TypeWidget = any> {
 /**
  * type de valores de las etiquetas jsx
  */
-export type ReactiveCreateElementOfType<AnyWidget> = 
-    string
+export type ReactiveCreateElementOfType<AnyWidget> =
+    | string
     | ((
           props: Record<string, any>
       ) =>
           | ReactiveCreateElement<AnyWidget>
-          | ReactiveCreateElement<AnyWidget>[]);//TypeElement<AnyWidget> | TypeElement<AnyWidget>[]
+          | ReactiveCreateElement<AnyWidget>[]); //TypeElement<AnyWidget> | TypeElement<AnyWidget>[]
 
 /**
  * arbol de informacion jsx
@@ -61,12 +61,16 @@ export interface ReactiveCreateElement<AnyWidget> {
     childs:
         | ReactiveCreateElement<AnyWidget>
         | ReactiveCreateElement<AnyWidget>[];
-    render(isUpdate?: boolean, storeState?: StoreState, oldDataState?: any): AnyWidget;
+    render(
+        isUpdate?: boolean,
+        storeState?: IStoreState,
+        oldDataState?: any
+    ): AnyWidget;
     getParentNode(): () => AnyWidget;
 }
 
 /**
- * tipos de estados 
+ * tipos de estados
  */
 export declare enum StateAction {
     CREATE = 0,
@@ -78,13 +82,10 @@ export declare enum StateAction {
 /**
  * almacena cada actualizacion de estado
  */
-export class StoreState {
+export interface IStoreState {
     TYPE_ACTION: StateAction;
     rendering: ReactiveCreateElement<any>[];
-    //private _current;
-    //private store;
     parentNode: ReactiveCreateElement<any>;
-    constructor(data: any, TYPE_ACTION?: StateAction);
     set data(v: any);
     get data(): any;
     get previousData(): any;
@@ -93,29 +94,22 @@ export class StoreState {
 /**
  * controla el estado y la vista
  */
-export class State implements Record<string, any> {
-    data: any;
-    ACTION_TYPE: StateAction;
-    proxySelf: State;
-    oldData: any;
-    nwdata: any;
+export interface IState extends Record<string, any> {
+    proxySelf: IState;
     currentParentNode: ReactiveCreateElement<any>;
-    currentStoreState: StoreState;
-    store: Map<ReactiveCreateElement<any>, StoreState>;
-    private readonly _listParentNode;
-    private readonly _mapParentNode;
-    get mapParentNode(): Map<ReactiveCreateElement<any>, State>;
+    currentStoreState: IStoreState;
+    store: Map<ReactiveCreateElement<any>, IStoreState>;
     get parentNode(): ReactiveCreateElement<any>;
     set parentNode(parent: ReactiveCreateElement<any>);
-    constructor(data: any);
-    addProxySelf(proxy: State): void;
+    get data(): any;
+    set data(v: any);
     set(newValue: any): void;
-    append(...values: any[]): void;
+    addProxySelf(proxy: IState): void;
+    append(values: any[]): void;
     invokeNode(): void;
     $setReturnData(value: any): void;
     is(value: any): boolean;
-    toString(): any;
-    private getAndResetData;
+    toString(): string;
     [Symbol.toPrimitive](): any;
     [Symbol.iterator](): Generator<any, void, unknown>;
 }

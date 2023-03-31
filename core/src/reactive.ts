@@ -3,13 +3,15 @@ import type {
     IWidgetUpdate,
     ReactiveCreateElement,
     ReactiveCreateElementOfType,
-    StoreState,
+    IStoreState,
     TypeElement,
-} from "./implements.d";
+} from "./contracts";
 import { Execute } from "./useState";
 import { State } from "./State";
 
-let widgetCreate: IWidget;
+export type { ReactiveCreateElement, ReactiveCreateElementOfType, TypeElement };
+
+let widgedHelper: IWidget;
 
 function toArray<TypeWidget = any>(
     data:
@@ -19,15 +21,25 @@ function toArray<TypeWidget = any>(
     return Array.isArray(data) ? data : [data];
 }
 
-export function addWidget(widget: IWidget) {
-    widgetCreate = widget;
+/**
+ * añade un objeto que representa el manejo del nodo: crear, añadir, actualizar, eliminar y seleccionar
+ *
+ * @param widget adds an object that represents the handling of the node: create, add, update, delete and select
+ */
+export function addWidgetHelper(helper: IWidget) {
+    widgedHelper = helper;
 }
 
+/**
+ * clase estatica de creación
+ *
+ * static class of creation
+ */
 export class Reactive {
     /**
      *
      * @param elements tree childs
-     * @returns array TypeElement<TypeWidget>[]
+     * @returns
      */
     static Fragment<TypeWidget = any>(
         elements: TypeElement<TypeWidget>[]
@@ -36,9 +48,12 @@ export class Reactive {
     }
 
     /**
+     * crear la interfaz del nodo
      *
-     * @param type type element
-     * @param properties properties received
+     * create node interface
+     *
+     * @param type type element jsx
+     * @param properties properties received jsx
      * @param childs tree childs
      * @returns
      */
@@ -57,9 +72,9 @@ export class Reactive {
         setParent(childs);
 
         if (typeof type === "string") {
-            def.node = widgetCreate.createWidget(type);
+            def.node = widgedHelper.createWidget(type);
             def.childs = childs;
-            widgetCreate.setProperties(def.node, properties);
+            widgedHelper.setProperties(def.node, properties);
         } else if (typeof type === "function") {
             const child =
                 type.name === "Fragment"
@@ -90,14 +105,21 @@ function getParentNode() {
     return getParent(this);
 }
 
+/**
+ * encargada de renderizar todo el árbol de la aplicación
+ *
+ * in charge of rendering the entire application tree
+ *
+ * @param root root element
+ * @param component component to render
+ * @returns
+ */
 export function render<TypeWidget = any>(
     root: string,
     component: ReactiveCreateElement<TypeWidget>
 ) {
-    component.node = widgetCreate.querySelector(root);
+    component.node = widgedHelper.querySelector(root);
     component.render();
-    console.log(component);
-
     return component;
 }
 
@@ -110,18 +132,18 @@ function renderDataState<TypeWidget = any>(
     if (Array.isArray(storeState.data) || Array.isArray(storeState.rendering)) {
         (storeState.rendering ?? storeState.data).forEach(
             (def: ReactiveCreateElement<TypeWidget>) => {
-                widgetCreate.appendWidget(parent, def?.render() ?? def);
+                widgedHelper.appendWidget(parent, def?.render() ?? def);
             }
         );
     } else {
-        widgetCreate.appendWidget(parent, state);
+        widgedHelper.appendWidget(parent, state);
     }
 }
 
 /** @this ReactiveCreateElement<TypeWidget> */
 function renderView<TypeWidget = any>(
     isUpdate?: boolean,
-    storeState?: StoreState
+    storeState?: IStoreState
 ) {
     if (isUpdate) {
         const ctxParentNode: ReactiveCreateElement<TypeWidget> =
@@ -170,7 +192,7 @@ function renderView<TypeWidget = any>(
                  */
             }
 
-            widgetCreate.updateWidget(updateInfo);
+            widgedHelper.updateWidget(updateInfo);
         });
 
         return;
@@ -183,7 +205,7 @@ function renderView<TypeWidget = any>(
             if (typeof child === "object" && !isState) {
                 const { node } = getParent<TypeWidget>(child);
                 if (typeof child.node === "object") {
-                    widgetCreate.appendWidget(node, child.node);
+                    widgedHelper.appendWidget(node, child.node);
                 }
 
                 child.render();
@@ -192,7 +214,7 @@ function renderView<TypeWidget = any>(
                 if (isState) {
                     renderDataState(this, parent, child);
                 } else {
-                    widgetCreate.appendWidget(parent, child);
+                    widgedHelper.appendWidget(parent, child);
                 }
             }
         }

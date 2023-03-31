@@ -1,7 +1,7 @@
-import type { IWidget, TextWidget } from "./implements";
+import type { IWidget, TextWidget } from "./contracts";
 import { StateAction } from "./State";
 
-export class ReactiveText extends Text {
+export class ReactiveText extends Text implements TextWidget {
     constructor(text: any) {
         super(text);
     }
@@ -15,28 +15,29 @@ export class ReactiveText extends Text {
     }
 }
 
-export const createWidget: IWidget<HTMLElement> = {
-    setText: function (widget: HTMLElement, str: string): void {
+export class WidgetHelper implements IWidget<HTMLElement> {
+    setText(widget: HTMLElement, str: string): void {
         widget.textContent = str;
-    },
-    createText: function (str: string) {
+    }
+
+    createText(str: string) {
         return new ReactiveText(str);
-    },
-    createWidget: function (type: string): HTMLElement {
+    }
+
+    createWidget(type: string): HTMLElement {
         return document.createElement(type);
-    },
-    appendWidget: function (
+    }
+
+    appendWidget(
         parent: HTMLElement,
         childWidget: HTMLElement | HTMLElement[]
     ): void {
         parent.append(
             ...(Array.isArray(childWidget) ? childWidget : [childWidget])
         );
-    },
-    setProperties: function (
-        parent: HTMLElement,
-        props: Record<string, any>
-    ): void {
+    }
+
+    setProperties(parent: HTMLElement, props: Record<string, any>): void {
         for (const key in props) {
             const value = props[key];
             if (key.startsWith("on")) {
@@ -45,11 +46,13 @@ export const createWidget: IWidget<HTMLElement> = {
                 parent.setAttribute(key, String(value));
             }
         }
-    },
-    querySelector(selector: string) {
+    }
+
+    querySelector(selector: string): HTMLElement {
         return document.querySelector(selector);
-    },
-    updateWidget: function (info): void {
+    }
+
+    updateWidget(info): void {
         const childNodes = info.node.childNodes;
         const element = childNodes.item(info.updateIndex) as any;
         const previous = element?.previousSibling;
@@ -57,10 +60,10 @@ export const createWidget: IWidget<HTMLElement> = {
         if (info.isStringable) {
             return (element.data = info.state);
         }
-        
+
         const elements = Array.from(childNodes)
             .slice(info.updateIndex)
-            .slice(0, info.totalChilds);
+            .slice(0, info.totalChilds) as HTMLElement[];
         const next = elements.at(-1)?.nextSibling;
 
         if (info.typeAction === StateAction.NEW) {
@@ -83,5 +86,5 @@ export const createWidget: IWidget<HTMLElement> = {
         } else if (info.typeAction === StateAction.UPDATE) {
             info.node.append(...info.state);
         }
-    },
-};
+    }
+}

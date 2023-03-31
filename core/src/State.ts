@@ -1,27 +1,43 @@
-import { ReactiveCreateElement } from "./implements";
+import { ReactiveCreateElement, IStoreState, IState } from "./contracts";
 
 /**
- * NEW STATE = CREATE
- * 
- * STATE.SET = NEW
- * 
- * STATE.APPEND = UPDATE
- * 
- * Object.Function  Return view = PREPEND is priority
+ * tipo acción del estado para indicar una accion de los lementos y crear cambios: creado, nuevo y actualizado
+ *
+ * action type of the state to indicate an action of the elements and create changes: created, new and updated
  */
 export enum StateAction {
+    // create state
     CREATE,
+
+    // new state
     NEW,
+
+    // update current state
     UPDATE,
+
+    /**
+     * manejo interno del renderizado si el estado a devuelto un nuevo objecto de valores
+     *
+     * internal handling of rendering if the state has returned a new values object
+     * @see {@link ReactiveCreateElement}
+     */
     PREPEND,
 }
 
-export class StoreState {
+/**
+ *
+ */
+export class StoreState implements IStoreState {
     public rendering: ReactiveCreateElement<any>[];
     private _current: any;
     private store: any[] = [];
     public parentNode: ReactiveCreateElement<any>;
 
+    /**
+     *
+     * @param data create data
+     * @param TYPE_ACTION default action create
+     */
     constructor(
         data: any,
         public TYPE_ACTION: StateAction = StateAction.CREATE
@@ -29,6 +45,9 @@ export class StoreState {
         this.data = data;
     }
 
+    /**
+     * add new data and store
+     */
     public set data(v: any) {
         const current = this.data;
 
@@ -54,10 +73,18 @@ export class StoreState {
         }
     }
 
+    /**
+     * current data
+     */
     public get data(): any {
         return this._current;
     }
 
+    /**
+     * obtener datos anterior. sirve para controlar la diferencia del dato actual y nuevo
+     *
+     * get previous data It is used to control the difference between current and new data.
+     */
     public get previousData(): any {
         return this.store.at(this.store.indexOf(this.data) - 1);
     }
@@ -67,11 +94,36 @@ export class StoreState {
     }
 }
 
-export class State implements Record<string, any> {
+export class State implements IState, Record<string, any> {
     proxySelf: State;
 
+    /**
+     * se actualiza cada vez que el estado es añadido a un elemento
+     *
+     * is updated each time the state is added to an element
+     *
+     * @example
+     * ```javascript
+     *  function App() {
+     *     const useGreeting = useState('hello work')
+     *      return (
+     *          <div>
+     *             <p>{useGreeting}</p>
+     *             <p>{useGreeting}</p>
+     *          </div>
+     *      );
+     * }
+     * ```
+     */
     currentParentNode: ReactiveCreateElement<any>;
 
+    /**
+     * cada vez se cambie el elemento padre del estado modifica a un nuevo almacenamiento de estado
+     * por si retorna nuevos valores de vista
+     *
+     * each time the parent element of the state is changed,
+     * it modifies a new state store in case it returns new view values
+     */
     public currentStoreState: StoreState;
 
     public store: Map<ReactiveCreateElement<any>, StoreState> = new Map();
@@ -80,6 +132,11 @@ export class State implements Record<string, any> {
         return this.currentParentNode;
     }
 
+    /**
+     * actualiza el nodo en el que está el estado
+     *
+     * update the node the status is on
+     */
     public set parentNode(parent: ReactiveCreateElement<any>) {
         this.currentParentNode = parent;
 
@@ -108,33 +165,71 @@ export class State implements Record<string, any> {
         this.currentStoreState = new StoreState(data);
     }
 
+    /**
+     *
+     * @param proxy store proxy
+     */
     addProxySelf(proxy: State) {
         this.proxySelf = proxy;
     }
 
+    /**
+     * nuevo estado
+     *
+     * new state
+     */
     set(newValue: any) {
         this.currentStoreState.TYPE_ACTION = StateAction.NEW;
         this.currentStoreState.data = newValue;
         this.invokeNode();
     }
 
+    /**
+     * empuja nuevos datos al arreglo
+     *
+     * push new data to array
+     */
     append(values: any[]) {
         this.currentStoreState.TYPE_ACTION = StateAction.UPDATE;
         this.currentStoreState.data = values;
         this.invokeNode();
     }
 
+    /**
+     * si hay nuevos datos invoca la funcion envolvente que retorna los nuevos valores
+     *
+     * if there is new data, call the enclosing function that returns the new values
+     */
     invokeNode() {
         this.store.forEach((storeState, ctx) => {
             ctx.render(true, storeState);
         });
     }
 
+    /**
+     * si el tipo de dato que a añadido en invoca una funcion retornando nuevos valores,
+     * esta funcion añade esos nuevos datos.
+     * sirve mas para un arreglo de elementos que devuelve una vista
+     *
+     * If the data type you added in invokes a function returning new values,
+     * this function adds that new data.
+     * it works better for an array of elements that returns a view
+     *
+     * @example
+     * ```javascript
+     *  state.map(value => (<p>{value}</p>));
+     * ```
+     */
     $setReturnData(value: any) {
         this.currentStoreState.TYPE_ACTION = StateAction.PREPEND;
         this.currentStoreState.data = value;
     }
 
+    /**
+     * is more for true and false values (value === data)
+     *
+     * @returns
+     */
     is(value: any): boolean {
         return this.currentStoreState.data === value;
     }

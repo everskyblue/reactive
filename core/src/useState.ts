@@ -1,5 +1,5 @@
 import { State } from "./State";
-import { ReactiveCreateElement } from "./implements";
+import { ReactiveCreateElement } from "./contracts";
 
 export type ExecuteReceivedProps<T = any> = {
     state: State & T;
