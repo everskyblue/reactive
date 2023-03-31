@@ -9,8 +9,6 @@ import type {
 import { Execute } from "./useState";
 import { State } from "./State";
 
-export type { ReactiveCreateElement, ReactiveCreateElementOfType, TypeElement };
-
 let widgedHelper: IWidget;
 
 function toArray<TypeWidget = any>(

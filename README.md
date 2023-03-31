@@ -12,10 +12,10 @@ that returns a view array.
 **index.jsx**
 
 ```javascript
-import { Reactive, addWidget, render, WidgetHelper } from "reactive";
+import { Reactive, addWidgetHelper, render, WidgetHelper } from "reactive";
 import { App } from "./App";
 
-addWidget(new WidgetHelper());
+addWidgetHelper(new WidgetHelper());
 render("#app", <App />);
 ```
 

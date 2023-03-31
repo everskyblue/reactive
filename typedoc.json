@@ -1,6 +1,6 @@
 {
     "$schema": "https://typedoc.org/schema.json",
-    "entryPoints": ["./core/index.ts"],
+    "entryPoints": ["./core/index.ts", "./core/src/contracts.ts"],
     "darkHighlightTheme": "material-theme-darker",
     "exclude": [
         "example/**/*",
