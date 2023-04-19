@@ -1,8 +1,10 @@
 import { State } from "./State";
 import { ReactiveCreateElement } from "./contracts";
 
+const mapState = new Map();
+
 export type ExecuteReceivedProps<T = any> = {
-    state: State & T;
+    state?: State & T;
     /**
      * recibe cualquier valor
      *
@@ -12,7 +14,7 @@ export type ExecuteReceivedProps<T = any> = {
 };
 
 export type Executeprops<T = any> = ExecuteReceivedProps & {
-    callback: (
+    callback?: (
         properties: ExecuteReceivedProps,
         childs?: ReactiveCreateElement<T>
     ) => any;
@@ -39,11 +41,25 @@ function bind(target: State, key: string) {
  * Returns a proxy to handle the data values and rendering of the view The original value of an object is returned
  * not yet implemented the rendering is with Object only this allowed: String, Number, Boolean, Array
  */
-export function useState<TypeData = any>(
-    data?: TypeData
-    /*reInvokeCtx?: ReactiveCreateElement<TypeWidget>*/
+export function useState<TypeData = any, TypeWidget = any>(
+    data?: TypeData,
+    reInvokeCtx?: ReactiveCreateElement<TypeWidget>
 ): TypeData & State {
-    const proxies = new Proxy(new State(data), {
+    let push = true;
+    if (mapState.has(reInvokeCtx) && reInvokeCtx?.isReInvoke) {
+        const store = mapState.get(reInvokeCtx);
+        const state = store.states[store.current];
+        store.current += 1;
+        if (store.current === store.states.length) {
+            store.current = 0;
+        }
+        //console.log(store, state.data);
+        data = state.data;
+        push = false;
+        return state
+    }
+
+    const proxies = new Proxy(new State(data, reInvokeCtx), {
         get(target, key: string) {
             if (key in target) {
                 return bind(target, key);
@@ -91,6 +107,15 @@ export function useState<TypeData = any>(
 
     proxies.addProxySelf(proxies);
 
+    if (!mapState.has(reInvokeCtx)) {
+        mapState.set(reInvokeCtx, {
+            current: 0,
+            states: [proxies],
+        });
+    } else if (push) {
+        mapState.get(reInvokeCtx).states.push(proxies);
+    }
+
     return proxies;
 }
 
@@ -102,8 +127,10 @@ export function useState<TypeData = any>(
  * And render it again without having to call the whole component
  */
 export function Execute(
-    { state, callback, option }: Executeprops,
+    props: Executeprops | null,
     childs: ReactiveCreateElement<any>
 ) {
-    return callback.call(this, { state, option }, childs);
+    const { state, callback, option } = props ?? ({} as Executeprops);
+    if (callback) return callback.call(this, { state, option }, childs);
+    return childs;
 }

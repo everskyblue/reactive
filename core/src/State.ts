@@ -27,7 +27,7 @@ export enum StateAction {
 /**
  *
  */
-export class StoreState implements IStoreState {
+export class StoreState<TypeWidget> implements IStoreState {
     public rendering: ReactiveCreateElement<any>[];
     private _current: any;
     private store: any[] = [];
@@ -35,10 +35,12 @@ export class StoreState implements IStoreState {
 
     /**
      *
+     * @param superCtx context superiority
      * @param data create data
      * @param TYPE_ACTION default action create
      */
     constructor(
+        public superCtx: ReactiveCreateElement<TypeWidget>,
         data: any,
         public TYPE_ACTION: StateAction = StateAction.CREATE
     ) {
@@ -64,6 +66,7 @@ export class StoreState implements IStoreState {
 
         // not ReactiveCreateElement<any>[]
         if (this.TYPE_ACTION !== StateAction.PREPEND) {
+            if (this.store.includes(v)) return;
             // So you can get the above data correctly and you can update the widget
             if (this.TYPE_ACTION === StateAction.UPDATE) {
                 this.store.push([...current, ...this._current]);
@@ -94,7 +97,7 @@ export class StoreState implements IStoreState {
     }
 }
 
-export class State implements IState, Record<string, any> {
+export class State<TypeWidget = any> implements IState, Record<string, any> {
     proxySelf: State;
 
     /**
@@ -124,9 +127,10 @@ export class State implements IState, Record<string, any> {
      * each time the parent element of the state is changed,
      * it modifies a new state store in case it returns new view values
      */
-    public currentStoreState: StoreState;
+    public currentStoreState: StoreState<TypeWidget>;
 
-    public store: Map<ReactiveCreateElement<any>, StoreState> = new Map();
+    public store: Map<ReactiveCreateElement<any>, StoreState<TypeWidget>> =
+        new Map();
 
     public get parentNode(): ReactiveCreateElement<any> {
         return this.currentParentNode;
@@ -139,12 +143,14 @@ export class State implements IState, Record<string, any> {
      */
     public set parentNode(parent: ReactiveCreateElement<any>) {
         this.currentParentNode = parent;
+        console.log("parent call 2", parent);
 
         if (
             typeof this.currentStoreState.parentNode !== "undefined" &&
             this.currentStoreState.parentNode !== parent
         ) {
-            this.currentStoreState = new StoreState(
+            this.currentStoreState = new StoreState<TypeWidget>(
+                this.superCtx,
                 this.currentStoreState.data
             );
         }
@@ -157,12 +163,18 @@ export class State implements IState, Record<string, any> {
         return this.currentStoreState.data;
     }
 
-    public set data(v: any) {
-        this.currentStoreState.data = v;
-    }
+    /* public set data(v: any) {
+        this.store.forEach((storeState, ctx) => {
+            storeState.data = v;
+        });
+        //this.currentStoreState.data = v;
+    } */
 
-    constructor(data: any) {
-        this.currentStoreState = new StoreState(data);
+    constructor(
+        data: any,
+        private superCtx: ReactiveCreateElement<TypeWidget>
+    ) {
+        this.currentStoreState = new StoreState<TypeWidget>(superCtx, data);
     }
 
     /**
@@ -179,8 +191,16 @@ export class State implements IState, Record<string, any> {
      * new state
      */
     set(newValue: any) {
-        this.currentStoreState.TYPE_ACTION = StateAction.NEW;
-        this.currentStoreState.data = newValue;
+        this.store.forEach(setData);
+        if (this.store.size === 0) {
+            //setData(this.currentStoreState);
+        }
+
+        function setData(storeState: StoreState<TypeWidget>) {
+            storeState.TYPE_ACTION = StateAction.NEW;
+            storeState.data = newValue;
+        }
+
         this.invokeNode();
     }
 
@@ -190,8 +210,10 @@ export class State implements IState, Record<string, any> {
      * push new data to array
      */
     append(values: any[]) {
-        this.currentStoreState.TYPE_ACTION = StateAction.UPDATE;
-        this.currentStoreState.data = values;
+        this.store.forEach((storeState) => {
+            storeState.TYPE_ACTION = StateAction.UPDATE;
+            storeState.data = values;
+        });
         this.invokeNode();
     }
 
@@ -201,9 +223,13 @@ export class State implements IState, Record<string, any> {
      * if there is new data, call the enclosing function that returns the new values
      */
     invokeNode() {
-        this.store.forEach((storeState, ctx) => {
+        if (this.store.size > 1) {
+            throw new Error("error");
+        }
+        for (const [ctx, storeState] of this.store.entries()) {
+            console.log("RENDER STATE", ctx, storeState);
             ctx.render(true, storeState);
-        });
+        }
     }
 
     /**

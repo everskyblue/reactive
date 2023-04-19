@@ -9,12 +9,13 @@ export type TypeElement<AnyWidget = any> =
     | string
     | boolean
     | number
-    | AnyWidget;
+    | IState
+    | ReactiveCreateElement<AnyWidget>;
 
 /**
  * parametros que recibe cuando el estado cambia de valor
  * controla cada elemento si se añade o se elimina del vista
- * 
+ *
  * parameters that it receives when the state changes
  * its value control each element if it is added or removed from the view
  */
@@ -30,13 +31,13 @@ export interface IWidgetUpdate<TypeWidget> {
 /**
  * interface para el manejo y controlar de la aplicacion
  * se llama cuando se va a renderizar el component
- * 
+ *
  * interface for managing and controlling the application is called
  * when the component is going to be rendered
  */
 export interface IWidget<TypeWidget = any> {
     setText(widget: TypeWidget, str: string): void;
-    createText(str: string): TypeWidget | Text;
+    createText(str: string|number|boolean): TypeWidget | Text;
     createWidget(type: string): TypeWidget;
     appendWidget(
         parent: TypeWidget,
@@ -45,45 +46,50 @@ export interface IWidget<TypeWidget = any> {
     setProperties(parent: TypeWidget, props: Record<string, any>): void;
     querySelector(selector: string): TypeWidget;
     updateWidget(updateInfo: IWidgetUpdate<TypeWidget>): void;
+    replaceChild(widgetParent: TypeWidget, newWidget: TypeWidget[], currentWidgets: TypeWidget[]): void;
 }
 
 /**
  * type de valores de las etiquetas jsx
- * 
+ *
  * jsx tag values type
  */
 export type ReactiveCreateElementOfType<AnyWidget> =
     | string
     | ((
-          props: Record<string, any>
+          props: Record<string, any>,
+          childs?: TypeElement<AnyWidget>
       ) =>
           | ReactiveCreateElement<AnyWidget>
           | ReactiveCreateElement<AnyWidget>[]); //TypeElement<AnyWidget> | TypeElement<AnyWidget>[]
 
 /**
  * arbol de informacion jsx
- * 
+ *
  * jsx info tree
  */
 export interface ReactiveCreateElement<AnyWidget> {
+    isReInvoke: boolean;
+    sharedContext: Map<string | number, any>;
     type: ReactiveCreateElementOfType<AnyWidget>;
     node: AnyWidget;
     parentNode: ReactiveCreateElement<AnyWidget>; //ReactiveCreateElementOfType<AnyWidget>;
-    properties: Record<string, any>;
-    childs:
-        | ReactiveCreateElement<AnyWidget>
-        | ReactiveCreateElement<AnyWidget>[];
+    properties: Record<string, any> & {
+        shareContext?: { id: string | number; ref: any };
+    };
+    childs: TypeElement<AnyWidget>[];
     render(
         isUpdate?: boolean,
         storeState?: IStoreState,
         oldDataState?: any
-    ): AnyWidget;
-    getParentNode(): () => AnyWidget;
+    ): AnyWidget | ReactiveCreateElement<AnyWidget> | void;
+    getParentNode(): ReactiveCreateElement<AnyWidget>; // () => AnyWidget;
+    getSharedContext(id: string): any;
 }
 
 /**
  * tipos de estados
- * 
+ *
  * type state
  */
 export declare enum StateAction {
@@ -95,13 +101,14 @@ export declare enum StateAction {
 
 /**
  * almacena cada actualizacion de estado
- * 
+ *
  * stores each status update
  */
 export interface IStoreState {
     TYPE_ACTION: StateAction;
     rendering: ReactiveCreateElement<any>[];
     parentNode: ReactiveCreateElement<any>;
+    superCtx?: ReactiveCreateElement<any>;
     set data(v: any);
     get data(): any;
     get previousData(): any;
@@ -109,7 +116,7 @@ export interface IStoreState {
 
 /**
  * controla el estado y la vista
- * 
+ *
  * controls state and view
  */
 export interface IState extends Record<string, any> {

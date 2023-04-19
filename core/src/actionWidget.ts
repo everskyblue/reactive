@@ -16,6 +16,20 @@ export class ReactiveText extends Text implements TextWidget {
 }
 
 export class WidgetHelper implements IWidget<HTMLElement> {
+    replaceChild(widgetParent: HTMLElement, newWidget: HTMLElement[], currentWidget: HTMLElement[]): void {
+        //widgetParent.replaceChildren(...newWidget)
+
+        currentWidget.forEach((widget, i) => {
+            widgetParent.replaceChild(newWidget[i], widget)
+        });
+    
+        /* if (e) {
+            const e = widget.childNodes.item(position)
+            widget.removeChild(e);
+            console.log(e, widget, widget.childNodes.length);
+        } */
+    }
+
     setText(widget: HTMLElement, str: string): void {
         widget.textContent = str;
     }
@@ -32,6 +46,7 @@ export class WidgetHelper implements IWidget<HTMLElement> {
         parent: HTMLElement,
         childWidget: HTMLElement | HTMLElement[]
     ): void {
+        //console.log(childWidget, "7", parent);
         parent.append(
             ...(Array.isArray(childWidget) ? childWidget : [childWidget])
         );
