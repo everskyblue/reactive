@@ -37,7 +37,7 @@ export interface IWidgetUpdate<TypeWidget> {
  */
 export interface IWidget<TypeWidget = any> {
     setText(widget: TypeWidget, str: string): void;
-    createText(str: string|number|boolean): TypeWidget | Text;
+    createText(str: string | number | boolean): TypeWidget | Text;
     createWidget(type: string): TypeWidget;
     appendWidget(
         parent: TypeWidget,
@@ -46,8 +46,22 @@ export interface IWidget<TypeWidget = any> {
     setProperties(parent: TypeWidget, props: Record<string, any>): void;
     querySelector(selector: string): TypeWidget;
     updateWidget(updateInfo: IWidgetUpdate<TypeWidget>): void;
-    replaceChild(widgetParent: TypeWidget, newWidget: TypeWidget[], currentWidgets: TypeWidget[]): void;
+    replaceChild(
+        /*widgetParent: TypeWidget, */ newWidget: TypeWidget[],
+        oldWidget: TypeWidget[]
+    ): void;
 }
+
+export type ReactivePropsWithChild<Properties = {}, AnyWidget = any> = Properties & {
+    children?: TypeElement<AnyWidget>[] ;
+};
+
+export type ReactivePropsSharedCtx<Properties = {}, Reference = any> = Properties & {shareContext: {id: any, ref: Reference}};
+
+export type ReactiveProps<Properties = {}, AnyWidget = any> = Omit<
+    ReactivePropsWithChild<Properties, AnyWidget>,
+    "children"
+>;
 
 /**
  * type de valores de las etiquetas jsx
@@ -57,8 +71,8 @@ export interface IWidget<TypeWidget = any> {
 export type ReactiveCreateElementOfType<AnyWidget> =
     | string
     | ((
-          props: Record<string, any>,
-          childs?: TypeElement<AnyWidget>
+          props: ReactiveProps
+          //childs?: TypeElement<AnyWidget>
       ) =>
           | ReactiveCreateElement<AnyWidget>
           | ReactiveCreateElement<AnyWidget>[]); //TypeElement<AnyWidget> | TypeElement<AnyWidget>[]
@@ -83,7 +97,7 @@ export interface ReactiveCreateElement<AnyWidget> {
         storeState?: IStoreState,
         oldDataState?: any
     ): AnyWidget | ReactiveCreateElement<AnyWidget> | void;
-    getParentNode(): ReactiveCreateElement<AnyWidget>; // () => AnyWidget;
+    getNodeWidget(): ReactiveCreateElement<AnyWidget>; // () => AnyWidget;
     getSharedContext(id: string): any;
 }
 
@@ -137,4 +151,10 @@ export interface IState extends Record<string, any> {
     toString(): string;
     [Symbol.toPrimitive](): any;
     [Symbol.iterator](): Generator<any, void, unknown>;
+}
+
+interface IStateHook<TypeWidget = any> {
+    isStateHandler: boolean;
+    parentNode: ReactiveCreateElement<TypeWidget>;
+    state: IState;
 }

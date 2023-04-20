@@ -5,6 +5,7 @@ import type {
     ReactiveCreateElementOfType,
     IStoreState,
     TypeElement,
+    ReactiveProps,
 } from "./contracts";
 import { Execute } from "./useState";
 import { State } from "./State";
@@ -39,9 +40,9 @@ export class Reactive {
      * @returns
      */
     static Fragment<TypeWidget = any>(
-        elements: TypeElement<TypeWidget>[]
+        {children}: ReactiveProps<any, TypeWidget>
     ): TypeElement<TypeWidget>[] {
-        return elements;
+        return children;
     }
 
     /**
@@ -59,7 +60,7 @@ export class Reactive {
         properties: Record<string, any>,
         ...childs: TypeElement<TypeWidget>[]
     ): ReactiveCreateElement<TypeWidget> {
-        const treeWidget = new TreeWidget(type, properties, widgedHelper);
+        const treeWidget = Object.seal(new TreeWidget(type, properties, widgedHelper));
    
         const shareContext = treeWidget.properties?.shareContext;
 
@@ -68,7 +69,7 @@ export class Reactive {
             delete treeWidget.properties.shareContext;
         }
 
-        setParent(childs);
+        //setParent(childs);
 
         if (typeof type === "string") {
             treeWidget.node = widgedHelper.createWidget(type);
@@ -77,10 +78,14 @@ export class Reactive {
         } else if (typeof treeWidget.type === "function") {
             const child =
                 type.name === "Fragment"
-                    ? treeWidget.type(childs)
-                    : treeWidget.type.call(treeWidget, properties, childs);
+                    ? treeWidget.type({children: childs})
+                    : treeWidget.type.call(
+                          treeWidget,
+                          Object.assign(properties ?? {}, {children: childs}),
+                          childs
+                      );
             treeWidget.childs = toArray(child);
-            setParent(treeWidget.childs);
+            //setParent(treeWidget.childs);
         }
 
         function setParent(childs: TypeElement<TypeWidget>[]) {

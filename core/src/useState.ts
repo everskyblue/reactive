@@ -45,17 +45,13 @@ export function useState<TypeData = any, TypeWidget = any>(
     data?: TypeData,
     reInvokeCtx?: ReactiveCreateElement<TypeWidget>
 ): TypeData & State {
-    let push = true;
-    if (mapState.has(reInvokeCtx) && reInvokeCtx?.isReInvoke) {
+    if (mapState.has(reInvokeCtx)) {
         const store = mapState.get(reInvokeCtx);
         const state = store.states[store.current];
         store.current += 1;
         if (store.current === store.states.length) {
             store.current = 0;
         }
-        //console.log(store, state.data);
-        data = state.data;
-        push = false;
         return state
     }
 
@@ -107,13 +103,13 @@ export function useState<TypeData = any, TypeWidget = any>(
 
     proxies.addProxySelf(proxies);
 
-    if (!mapState.has(reInvokeCtx)) {
-        mapState.set(reInvokeCtx, {
-            current: 0,
-            states: [proxies],
-        });
-    } else if (push) {
-        mapState.get(reInvokeCtx).states.push(proxies);
+    if (reInvokeCtx) {
+        if (!mapState.has(reInvokeCtx)) {
+            mapState.set(reInvokeCtx, {
+                current: 0,
+                states: [proxies],
+            });
+        } 
     }
 
     return proxies;

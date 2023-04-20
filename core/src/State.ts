@@ -143,7 +143,7 @@ export class State<TypeWidget = any> implements IState, Record<string, any> {
      */
     public set parentNode(parent: ReactiveCreateElement<any>) {
         this.currentParentNode = parent;
-        console.log("parent call 2", parent);
+        //console.log("parent call 2", parent);
 
         if (
             typeof this.currentStoreState.parentNode !== "undefined" &&
@@ -191,17 +191,12 @@ export class State<TypeWidget = any> implements IState, Record<string, any> {
      * new state
      */
     set(newValue: any) {
-        this.store.forEach(setData);
-        if (this.store.size === 0) {
-            //setData(this.currentStoreState);
-        }
+        setData(this.currentStoreState);
 
         function setData(storeState: StoreState<TypeWidget>) {
             storeState.TYPE_ACTION = StateAction.NEW;
             storeState.data = newValue;
         }
-
-        this.invokeNode();
     }
 
     /**

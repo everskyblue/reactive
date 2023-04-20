@@ -1,4 +1,5 @@
 import {
+    IState,
     IStoreState,
     IWidget,
     IWidgetUpdate,
@@ -9,8 +10,8 @@ import {
 import { State } from "./State";
 import { Execute } from "./useState";
 
-let time = 0;
-let call = 0;
+const storeProxy: Set<IState> = new Set();
+const ALLOWED_TYPES = ["string", "number", "boolean"];
 
 function toArray<TypeWidget = any>(
     data: TypeElement<TypeWidget> | TypeElement<TypeWidget>[]
@@ -18,16 +19,37 @@ function toArray<TypeWidget = any>(
     return Array.isArray(data) ? data : [data];
 }
 
+function getNodeWidgetChild(ctx: ReactiveCreateElement<any>) {
+    if (typeof ctx.type === 'string') return toArray(ctx.node);
+    return ctx.childs.map(recursive).flat();
+}
+
+function recursive(ctx: TreeWidget) {
+    if (ctx.node) {
+        return ctx.node;
+    }
+    return each(ctx).flat();
+}
+
+function each(ctx: TreeWidget) {
+    const v = [];
+    for (const child of ctx.childs) {
+        let r = child;
+        if (child instanceof TreeWidget) {
+            r = recursive(child);
+        }
+        v.push(r);
+    }
+    return v;
+}
+
 function getParent<TypeWidget = any>(
     ctx: ReactiveCreateElement<TypeWidget> | State
 ): ReactiveCreateElement<TypeWidget> | any {
-    let parent = ctx.parentNode;
+    let parent = ctx;
 
-    if (typeof parent === "undefined") {
-        return ctx;
-    }
-
-    while (typeof parent.node !== "object") {
+    //@ts-ignore
+    while (parent && typeof parent.node !== "object") {
         parent = parent.parentNode;
     }
 
@@ -40,10 +62,10 @@ export class TreeWidget<TypeWidget = any>
     isReInvoke: boolean = false;
     sharedContext: Map<string | number, any> = new Map();
 
-    node: TypeWidget;
-    parentNode: ReactiveCreateElement<TypeWidget>;
+    node: TypeWidget = undefined;
+    parentNode: ReactiveCreateElement<TypeWidget> = undefined;
 
-    childs: TypeElement<TypeWidget>[];
+    childs: TypeElement<TypeWidget>[] = undefined;
 
     constructor(
         public type: ReactiveCreateElementOfType<TypeWidget>,
@@ -78,7 +100,7 @@ export class TreeWidget<TypeWidget = any>
                 false
             );
         }
-        return ["string", "number", "boolean"].includes(typeof def.data);
+        return ALLOWED_TYPES.includes(typeof def.data);
     }
 
     private onUpdate(storeState?: IStoreState) {
@@ -136,116 +158,87 @@ export class TreeWidget<TypeWidget = any>
 
     render(
         isUpdate?: boolean,
-        storeState?: IStoreState,
-        oldDataState?: any
+        storeState?: IStoreState
     ): TypeWidget | ReactiveCreateElement<TypeWidget> | void {
-        const ctxParentNode: ReactiveCreateElement<TypeWidget> =
-            typeof this.type === "function" ? getParent(this) : this;
-        console.log("CALL 3", this, isUpdate, storeState);
+        const ctxWidget: ReactiveCreateElement<TypeWidget> =
+            this.getNodeWidget();
+
+        //console.log("CALL 3", this, ctxWidget);
+
+        if (this.node) {
+            this.widgedHelper.setProperties(this.node, this.properties);
+        }
+
         if (isUpdate && storeState) {
-            if (call) throw "errorx";
-            if (!call) call += 1;
             if (storeState.superCtx) {
-                const { type, properties, childs } = storeState.superCtx;
-
-                storeState.superCtx.isReInvoke = true;
-                /*const superCtxParent = getParent(
-                    storeState.superCtx
-                ) as ReactiveCreateElement<TypeWidget>;
-                const index = superCtxParent.childs.findIndex(
-                    (child) => child === storeState.superCtx
-                );*/
-                const nwThree = (type as Function).call(
-                    storeState.superCtx,
-                    storeState.superCtx.properties,
-                    storeState.superCtx.childs
-                );
-                //const nwWidget = nwThree.render(true, false);
-                console.log(type.toString(), this, isUpdate, storeState);
-                //console.log(index, nwThree, nwWidget, storeState.superCtx);
-                /*
-                this.widgedHelper.replaceChild(
-                    superCtxParent.node,
-                    toArray(nwWidget),
-                    storeState.superCtx.childs.map(
-                        (tree: ReactiveCreateElement<TypeWidget>) => tree.node
-                    )
-                );
-
-                storeState.superCtx.childs = toArray(nwThree);
-                */
-                return; //storeState.superCtx.render(true);
+                const newRender: ReactiveCreateElement<TypeWidget> =
+                    (storeState.superCtx.type as Function)
+                        .call(
+                            storeState.superCtx,
+                            storeState.superCtx.properties,
+                            storeState.superCtx.childs
+                        )
+                        .render();
+                console.log(newRender, storeState.superCtx);
+                const oldChilds = getNodeWidgetChild(storeState.superCtx);
+                const nodes = getNodeWidgetChild(newRender);
+                this.widgedHelper.replaceChild(nodes, oldChilds);
+                newRender.parentNode = storeState.superCtx;
+                storeState.superCtx.childs = toArray(newRender);
+            } else {
+                this.onUpdate(storeState);
             }
-            console.log("updatr stotr");
-            return this.onUpdate(storeState);
+
+            return;
         }
-        if (isUpdate) {
-            /*this.childs.forEach((element) => {
-                if (element instanceof TreeWidget) {
-                    element.render();
+
+        this.childs.forEach((child, index) => {
+            const isState = child instanceof State;
+            if (child instanceof TreeWidget) {
+                child.parentNode = this;
+
+                if (this.sharedContext.size) {
+                    this.sharedContext.forEach(
+                        (ref: any, id: string | number) => {
+                            child.sharedContext.set(id, ref);
+                        }
+                    );
                 }
-                console.log(ctxParentNode, element);
-            });*/
-            //console.log(this);
-            if (time === 100) {
-                debugger;
-                throw "error ";
-            }
-            time += 1;
-            return this.node ?? this;
-        }
-        //console.log(this.childs, "childs");
 
-        (this.childs as TypeElement<TypeWidget>[]).forEach(
-            (child: ReactiveCreateElement<TypeWidget>, index) => {
-                const isState = child instanceof State;
-
-                if (["string", "number", "boolean"].includes(typeof child)) {
-                    //widgedHelper.removeChild(ctxParentNode.node, index);
+                if (ctxWidget && typeof child.node === "object") {
+                    //widgedHelper.removeChild(child.node, index)
+                    this.widgedHelper.appendWidget(ctxWidget.node, child.node);
                 }
-                //console.log(child);
 
-                if (child instanceof TreeWidget) {
-                    if (this.sharedContext.size) {
-                        this.sharedContext.forEach(
-                            (ref: any, id: string | number) => {
-                                child.sharedContext.set(id, ref);
-                            }
-                        );
+                child.render(null, null);
+            } else {
+                //this.widgedHelper.removeChild(parent, index);
+                if (isState) {
+                    //child.parentNode = this;
+                    if (
+                        !storeProxy.has(child) &&
+                        child.currentStoreState.superCtx
+                    ) {
+                        this.rewriteMethod(child);
+                    } else if (!child.currentStoreState.superCtx) {
+                        this.rewriteMethod(child);
                     }
 
-                    const { node } = ctxParentNode;
-
-                    if (typeof child.node === "object") {
-                        this.widgedHelper.setProperties(
-                            child.node,
-                            child.properties
-                        );
-                        //widgedHelper.removeChild(child.node, index)
-                        this.widgedHelper.appendWidget(node, child.node);
-                    }
-
-                    child.render(null, null);
-                } else {
-                    const parent =
-                        this.node ?? getParent<TypeWidget>(this).node;
-                    //this.widgedHelper.removeChild(parent, index);
-                    if (isState) {
-                        this.renderDataState(this, parent, child);
-                    } else {
-                        this.widgedHelper.appendWidget(
-                            parent,
-                            this.widgedHelper.createText(child)
-                        );
-                    }
+                    if (ctxWidget)
+                        this.renderDataState(this, ctxWidget.node, child);
+                } else if (ctxWidget) {
+                    this.widgedHelper.appendWidget(
+                        ctxWidget.node,
+                        this.widgedHelper.createText(child as any)
+                    );
                 }
             }
-        );
+        });
 
-        return this.node ?? this;
+        return this;
     }
 
-    getParentNode(): ReactiveCreateElement<TypeWidget> {
+    getNodeWidget(): ReactiveCreateElement<TypeWidget> {
         if (typeof this.node === "object") {
             return this;
         }
@@ -261,7 +254,7 @@ export class TreeWidget<TypeWidget = any>
         parent: TypeWidget,
         state: State
     ) {
-        const storeState = state.store.get(ctx);
+        const storeState = state.currentStoreState; //state.store.get(ctx);
         if (
             Array.isArray(storeState.data) ||
             Array.isArray(storeState.rendering)
@@ -279,5 +272,24 @@ export class TreeWidget<TypeWidget = any>
         } else {
             this.widgedHelper.appendWidget(parent, state);
         }
+    }
+
+    private rewriteMethod(state: IState) {
+        const set = state.set.bind(state);
+        const append = state.append.bind(state);
+
+        state.set = (newValue: any) => {
+            console.log("SET VALUE");
+            set(newValue);
+            this.render(true, state.currentStoreState);
+        };
+
+        state.append = (values: any[]) => {
+            console.log("APPEND VALUE");
+            append(values);
+            this.render(true, state.currentStoreState);
+        };
+
+        storeProxy.add(state);
     }
 }
