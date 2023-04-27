@@ -16,21 +16,31 @@ export class ReactiveText extends Text implements TextWidget {
 }
 
 export class WidgetHelper implements IWidget<HTMLElement> {
-    replaceChild(newWidget: HTMLElement[], oldWidget: HTMLElement[]): void {
-        //widgetParent.replaceChildren(...newWidget)
-        
-        oldWidget.forEach(old => {
-            old.parentElement.replaceChild(newWidget.shift(), old)
-        });
-        
-        //console.log(newWidget, oldWidget, oldWidget.parentElement);
-        
-    
-        /* if (e) {
-            const e = widget.childNodes.item(position)
-            widget.removeChild(e);
-            console.log(e, widget, widget.childNodes.length);
-        } */
+    resetWidgets = (widgets: HTMLElement[]) => {
+        for (const element of widgets) {
+            element.innerHTML = '';
+        }
+    }
+
+    replaceChild(
+        widgetParent: HTMLElement,
+        newWidget: HTMLElement[],
+        oldWidget: HTMLElement[]
+    ): void {
+        if (newWidget.length === oldWidget.length) {
+            oldWidget.forEach((node, index) => {
+                node.replaceWith(newWidget[index]);
+            });
+        } else if (oldWidget.length === 1) {
+            oldWidget.at(0).replaceWith(...newWidget);
+        } else {
+            let next = oldWidget.at(-1).nextSibling;
+            oldWidget.forEach((node) => node.remove());
+            newWidget.forEach((nwnode) => {
+                widgetParent.insertBefore(nwnode, next);
+            });
+            //widgetParent.replaceChildren(...newWidget);
+        }
     }
 
     setText(widget: HTMLElement, str: string): void {
@@ -49,7 +59,6 @@ export class WidgetHelper implements IWidget<HTMLElement> {
         parent: HTMLElement,
         childWidget: HTMLElement | HTMLElement[]
     ): void {
-        //console.log(childWidget, "7", parent);
         parent.append(
             ...(Array.isArray(childWidget) ? childWidget : [childWidget])
         );
