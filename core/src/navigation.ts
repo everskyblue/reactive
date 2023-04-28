@@ -5,17 +5,6 @@ import type {
 import { exec } from "./hooks";
 import { useState } from "./hooks/useState";
 
-const callbacks = new Map();
-
-function useCallback(
-    fn: (...args: any[]) => any,
-    ctx: ReactiveCreateElement<any>
-) {
-    if (!callbacks.has(ctx)) {
-        callbacks.set(ctx, fn);
-    }
-    return callbacks.get(ctx);
-}
 
 interface RouteProps {
     path: string;
@@ -31,7 +20,7 @@ function hashChange(routes: RouteProps[]) {
         if (route.path === hash) return route.render;
     }
 }
-let e = 0;
+
 export function Routes({
     children,
     sharedContext
