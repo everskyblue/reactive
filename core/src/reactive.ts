@@ -7,7 +7,8 @@ import type {
     TypeElement,
     ReactiveProps,
 } from "./contracts";
-import { Execute } from "./useState";
+import { Execute } from "./hooks/useState";
+import { Listeners } from "./listener";
 import { State } from "./State";
 import { TreeWidget } from "./TreeWidget";
 
@@ -60,23 +61,18 @@ export class Reactive {
         properties: Record<string, any>,
         ...childs: TypeElement<TypeWidget>[]
     ): ReactiveCreateElement<TypeWidget> {
-        const treeWidget = Object.seal(new TreeWidget(type, properties, widgedHelper));
+        const treeWidget = Object.seal(new TreeWidget(type, properties, widgedHelper, childs));
    
-        const shareContext = treeWidget.properties?.shareContext;
-
-        if (shareContext) {
-            treeWidget.sharedContext.set(shareContext.id, shareContext.ref);
-            delete treeWidget.properties.shareContext;
-        }
-
         //setParent(childs);
 
         if (typeof type === "string") {
             treeWidget.node = widgedHelper.createWidget(type);
             treeWidget.childs = toArray(childs);
-            //widgedHelper.setProperties(def.node, properties);
         } else if (typeof treeWidget.type === "function") {
-            const child =
+            //console.log(type);
+            //console.log(treeWidget, treeWidget.sharedContext.get('identifier'));
+            
+            /*const child =
                 type.name === "Fragment"
                     ? treeWidget.type({children: childs})
                     : treeWidget.type.call(
@@ -84,7 +80,7 @@ export class Reactive {
                           Object.assign(properties ?? {}, {children: childs}),
                           childs
                       );
-            treeWidget.childs = toArray(child);
+            treeWidget.childs = toArray(child);*/
             //setParent(treeWidget.childs);
         }
 
@@ -115,8 +111,6 @@ export function render<TypeWidget = any>(
     root: string,
     component: ReactiveCreateElement<TypeWidget>
 ) {
-    console.log(component);
-
     component.node = widgedHelper.querySelector(root);
     component.render();
     return component;

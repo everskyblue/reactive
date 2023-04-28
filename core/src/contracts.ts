@@ -36,6 +36,7 @@ export interface IWidgetUpdate<TypeWidget> {
  * when the component is going to be rendered
  */
 export interface IWidget<TypeWidget = any> {
+    resetWidgets?: (widgets: TypeWidget[]) => void;
     setText(widget: TypeWidget, str: string): void;
     createText(str: string | number | boolean): TypeWidget | Text;
     createWidget(type: string): TypeWidget;
@@ -47,16 +48,23 @@ export interface IWidget<TypeWidget = any> {
     querySelector(selector: string): TypeWidget;
     updateWidget(updateInfo: IWidgetUpdate<TypeWidget>): void;
     replaceChild(
-        /*widgetParent: TypeWidget, */ newWidget: TypeWidget[],
+        widgetParent: TypeWidget,
+        newWidget: TypeWidget[],
         oldWidget: TypeWidget[]
     ): void;
 }
 
-export type ReactivePropsWithChild<Properties = {}, AnyWidget = any> = Properties & {
-    children?: TypeElement<AnyWidget>[] ;
+export type ReactivePropsWithChild<
+    Properties = {},
+    AnyWidget = any
+> = Properties & {
+    children?: TypeElement<AnyWidget>[];
 };
 
-export type ReactivePropsSharedCtx<Properties = {}, Reference = any> = Properties & {shareContext: {id: any, ref: Reference}};
+export type ReactivePropsSharedCtx<
+    Properties = {},
+    Reference = any
+> = Properties & { shareContext: { id: any; ref: Reference } };
 
 export type ReactiveProps<Properties = {}, AnyWidget = any> = Omit<
     ReactivePropsWithChild<Properties, AnyWidget>,
@@ -83,8 +91,9 @@ export type ReactiveCreateElementOfType<AnyWidget> =
  * jsx info tree
  */
 export interface ReactiveCreateElement<AnyWidget> {
+    originalChilds: TypeElement<AnyWidget>[];
     isReInvoke: boolean;
-    sharedContext: Map<string | number, any>;
+    sharedContext: IMapListeners;
     type: ReactiveCreateElementOfType<AnyWidget>;
     node: AnyWidget;
     parentNode: ReactiveCreateElement<AnyWidget>; //ReactiveCreateElementOfType<AnyWidget>;
@@ -157,4 +166,8 @@ interface IStateHook<TypeWidget = any> {
     isStateHandler: boolean;
     parentNode: ReactiveCreateElement<TypeWidget>;
     state: IState;
+}
+
+export interface IMapListeners extends Map<any, any>, Pick<string, any> {
+    [key: string]: any;
 }
