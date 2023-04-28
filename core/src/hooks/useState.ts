@@ -2,7 +2,6 @@ import { State } from "../State";
 import { IState, ReactiveCreateElement } from "../contracts";
 import { flattenState } from "./flattenState";
 
-const mapState = new Map();
 
 export type ExecuteReceivedProps<T = any> = {
     state?: State & T;
@@ -50,16 +49,6 @@ export function useState<TypeData = any, TypeWidget = any>(
     
     if (flatten instanceof State) {
         return flatten as TypeData & IState;
-    }
-
-    if (mapState.has(reInvokeCtx) && reInvokeCtx.isReInvoke) {
-        const store = mapState.get(reInvokeCtx);
-        const state = store.states[store.current];
-        store.current += 1;
-        if (store.current === store.states.length) {
-            store.current = 0;
-        }
-        return state;
     }
 
     const proxies = new Proxy(new State(data, reInvokeCtx), {

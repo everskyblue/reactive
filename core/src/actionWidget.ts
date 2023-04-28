@@ -1,4 +1,4 @@
-import type { IWidget, TextWidget } from "./contracts";
+import type { IWidget, IWidgetUpdate, TextWidget } from "./contracts";
 import { StateAction } from "./State";
 
 export class ReactiveText extends Text implements TextWidget {
@@ -79,7 +79,7 @@ export class WidgetHelper implements IWidget<HTMLElement> {
         return document.querySelector(selector);
     }
 
-    updateWidget(info): void {
+    updateWidget(info: IWidgetUpdate<HTMLElement>): void {
         const childNodes = info.node.childNodes;
         const element = childNodes.item(info.updateIndex) as any;
         const previous = element?.previousSibling;

@@ -175,8 +175,6 @@ export class TreeWidget<TypeWidget = any>
             }
         });
 
-        //console.log(this, storeState, ctxParentNode, findAllIndex);
-
         findAllIndex.forEach((findIndex) => {
             // get index
             const def = childs.at(findIndex);
@@ -262,7 +260,6 @@ export class TreeWidget<TypeWidget = any>
                 child.render();
             } else {
                 if (isState) {
-                    //child.parentNode = this;
                     if (
                         !storeProxy.has(child) &&
                         child.currentStoreState.superCtx
@@ -289,7 +286,7 @@ export class TreeWidget<TypeWidget = any>
         parent: TypeWidget,
         state: State
     ) {
-        const storeState = state.currentStoreState; //state.store.get(ctx);
+        const storeState = state.currentStoreState;
         if (
             Array.isArray(storeState.data) ||
             Array.isArray(storeState.rendering)

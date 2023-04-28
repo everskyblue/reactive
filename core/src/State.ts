@@ -143,8 +143,6 @@ export class State<TypeWidget = any> implements IState, Record<string, any> {
      */
     public set parentNode(parent: ReactiveCreateElement<any>) {
         this.currentParentNode = parent;
-        //console.log("parent call 2", parent);
-
         if (
             typeof this.currentStoreState.parentNode !== "undefined" &&
             this.currentStoreState.parentNode !== parent

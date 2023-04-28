@@ -62,37 +62,10 @@ export class Reactive {
         ...childs: TypeElement<TypeWidget>[]
     ): ReactiveCreateElement<TypeWidget> {
         const treeWidget = Object.seal(new TreeWidget(type, properties, widgedHelper, childs));
-   
-        //setParent(childs);
-
         if (typeof type === "string") {
             treeWidget.node = widgedHelper.createWidget(type);
             treeWidget.childs = toArray(childs);
-        } else if (typeof treeWidget.type === "function") {
-            //console.log(type);
-            //console.log(treeWidget, treeWidget.sharedContext.get('identifier'));
-            
-            /*const child =
-                type.name === "Fragment"
-                    ? treeWidget.type({children: childs})
-                    : treeWidget.type.call(
-                          treeWidget,
-                          Object.assign(properties ?? {}, {children: childs}),
-                          childs
-                      );
-            treeWidget.childs = toArray(child);*/
-            //setParent(treeWidget.childs);
-        }
-
-        function setParent(childs: TypeElement<TypeWidget>[]) {
-            childs.forEach((child) => {
-                if (typeof child === "object") {
-                    //if (!child.parentNode)
-                    child.parentNode = treeWidget;
-                }
-            });
-        }
-
+        } 
         return treeWidget;
     }
 }
