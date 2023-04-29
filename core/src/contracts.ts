@@ -101,13 +101,10 @@ export interface ReactiveCreateElement<AnyWidget> {
         shareContext?: { id: string | number; ref: any };
     };
     childs: TypeElement<AnyWidget>[];
-    render(
-        isUpdate?: boolean,
-        storeState?: IStoreState,
-        oldDataState?: any
-    ): AnyWidget | ReactiveCreateElement<AnyWidget> | void;
+    render(): ReactiveCreateElement<AnyWidget>;
     getNodeWidget(): ReactiveCreateElement<AnyWidget>; // () => AnyWidget;
     getSharedContext(id: string): any;
+    implementStates(...states: IState[]): void;
 }
 
 /**
@@ -154,7 +151,7 @@ export interface IState extends Record<string, any> {
     set(newValue: any): void;
     addProxySelf(proxy: IState): void;
     append(values: any[]): void;
-    invokeNode(): void;
+    //invokeNode(): void;
     $setReturnData(value: any): void;
     is(value: any): boolean;
     toString(): string;
@@ -170,4 +167,8 @@ interface IStateHook<TypeWidget = any> {
 
 export interface IMapListeners extends Map<any, any>, Pick<string, any> {
     [key: string]: any;
+}
+
+export interface ICallbackContext {
+    ctx: ReactiveCreateElement<any>;
 }

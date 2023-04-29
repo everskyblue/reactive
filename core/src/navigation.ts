@@ -39,7 +39,7 @@ export function Routes({
     }
 
     exec(() => {
-        this.rewriteMethod(routeState);
+        this.implementStates(routeState);
         window.addEventListener("hashchange", () => {
             const route = hashChange(routes);
             routeState.set(route ?? "page not fount");

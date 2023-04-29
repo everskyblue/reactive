@@ -203,11 +203,8 @@ export class State<TypeWidget = any> implements IState, Record<string, any> {
      * push new data to array
      */
     append(values: any[]) {
-        this.store.forEach((storeState) => {
-            storeState.TYPE_ACTION = StateAction.UPDATE;
-            storeState.data = values;
-        });
-        this.invokeNode();
+        this.currentStoreState.TYPE_ACTION = StateAction.UPDATE;
+        this.currentStoreState.data = values;
     }
 
     /**
@@ -215,7 +212,7 @@ export class State<TypeWidget = any> implements IState, Record<string, any> {
      *
      * if there is new data, call the enclosing function that returns the new values
      */
-    invokeNode() {
+    /*invokeNode() {
         if (this.store.size > 1) {
             throw new Error("error");
         }
@@ -223,7 +220,7 @@ export class State<TypeWidget = any> implements IState, Record<string, any> {
             console.log("RENDER STATE", ctx, storeState);
             ctx.render(true, storeState);
         }
-    }
+    }*/
 
     /**
      * si el tipo de dato que a añadido en invoca una funcion retornando nuevos valores,
@@ -242,6 +239,7 @@ export class State<TypeWidget = any> implements IState, Record<string, any> {
     $setReturnData(value: any) {
         this.currentStoreState.TYPE_ACTION = StateAction.PREPEND;
         this.currentStoreState.data = value;
+        return value;
     }
 
     /**

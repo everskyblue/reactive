@@ -10,7 +10,6 @@ import {
 } from "./contracts";
 import { Reactive } from "./reactive";
 import { State } from "./State";
-import { Execute } from "./hooks/useState";
 import { Listeners, MapListeners } from "./listener";
 
 const storeProxy: Set<IState> = new Set();
@@ -140,13 +139,13 @@ export class TreeWidget<TypeWidget = any>
                     "the execution of a state without an executing function is only allowed if they are strings, numbers or boolean values"
                 );
             }
-        } else if (
+        } /* else if (
             typeof def === "object" &&
             typeof def.type === "function" &&
             def.type.name !== Execute.name
         ) {
             throw new Error("is not a [function Execute] ");
-        }
+        } */
     }
 
     #isStringableState(def: any) {
@@ -198,12 +197,12 @@ export class TreeWidget<TypeWidget = any>
             ) {
                 def.type(def.properties) as unknown as State;
                 updateInfo.state = storeState.rendering.map((def) =>
-                    def.render(null, null)
+                    def.render().node
                 );
                 updateInfo.totalChilds = storeState.previousData.length;
-                setTimeout(() => {
+                /* setTimeout(() => {
                     storeState.rendering = undefined;
-                }, 0);
+                }, 0); */
             }
 
             this.widgedHelper.updateWidget(updateInfo);
@@ -264,13 +263,14 @@ export class TreeWidget<TypeWidget = any>
                         !storeProxy.has(child) &&
                         child.currentStoreState.superCtx
                     ) {
-                        this.rewriteMethod(child);
+                        this.#rewriteMethod(child);
                     } else if (!child.currentStoreState.superCtx) {
-                        this.rewriteMethod(child);
+                        this.#rewriteMethod(child);
                     }
 
-                    if (ctxWidget)
+                    if (ctxWidget) {
                         this.#renderDataState(this, ctxWidget.node, child);
+                    }
                 } else if (ctxWidget) {
                     this.widgedHelper.appendWidget(
                         ctxWidget.node,
@@ -293,9 +293,11 @@ export class TreeWidget<TypeWidget = any>
         ) {
             (storeState.rendering ?? storeState.data).forEach(
                 (def: ReactiveCreateElement<TypeWidget>) => {
+                    console.log(storeState,def);
+                    
                     this.widgedHelper.appendWidget(
                         parent,
-                        typeof def === "object" ? def.render() : def
+                        def instanceof TreeWidget ? def.render().node : def
                     );
                 }
             );
@@ -346,7 +348,7 @@ export class TreeWidget<TypeWidget = any>
         return this.sharedContext.get(id);
     }
 
-    rewriteMethod(...states: IState[]) {
+    #rewriteMethod(...states: IState[]) {
         for (const state of states) {
             const set = state.set.bind(state);
             const append = state.append.bind(state);
@@ -362,5 +364,9 @@ export class TreeWidget<TypeWidget = any>
             };
             storeProxy.add(state);
         }
+    }
+
+    implementStates(...states: IState[]) {
+        this.#rewriteMethod(...states);
     }
 }

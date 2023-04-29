@@ -74,11 +74,8 @@ export function useState<TypeData = any, TypeWidget = any>(
                  * More suitable for Array.map that returns a view
                  */
                 return typeof target.data[key] === "function"
-                    ? (...args: any[]) => (
-                          target.$setReturnData(
-                              target.data[key].apply(target.data, args)
-                          ),
-                          proxies
+                    ? (...args: any[]) =>  target.$setReturnData(
+                            target.data[key].apply(target.data, args)
                       )
                     : proxies;
             } else {
@@ -115,9 +112,9 @@ export function useState<TypeData = any, TypeWidget = any>(
  */
 export function Execute(
     props: Executeprops | null,
-    childs: ReactiveCreateElement<any>
+    children: ReactiveCreateElement<any>
 ) {
     const { state, callback, option } = props ?? ({} as Executeprops);
-    if (callback) return callback.call(this, { state, option }, childs);
-    return childs;
+    if (callback) return callback.call(this, { state, option, children });
+    return children;
 }
