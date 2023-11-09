@@ -1,10 +1,10 @@
-import { ReactiveCreateElement } from "../contracts";
 import { useCallback } from "./useCallback";
 import { HookStore } from "./hookStore";
+import { TreeWidget } from "src/TreeWidget";
 
 HookStore.createStore("memo");
 
-export function exec(callback: (...args: any[]) => any, ctx: ReactiveCreateElement<any>): typeof callback {
+export function exec(callback: (...args: any[]) => any, ctx: TreeWidget<any>): typeof callback {
     const memo = useCallback(callback, ctx);
     if (!HookStore.memo.has(memo)) {
         HookStore.memo.set(memo, false);

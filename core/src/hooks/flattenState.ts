@@ -1,14 +1,15 @@
-import { IState, ReactiveCreateElement } from "../contracts";
+import { TreeWidget } from "src/TreeWidget";
 import { HookStore } from "./hookStore";
 import { IStackTicket, createTicket, nextTicket } from "./stackTicket";
+import { State } from "src/State";
 
 HookStore.createStore("states");
 
-export function flattenState<TypeData>(ctx: ReactiveCreateElement<any>): IStackTicket | IState & TypeData {
+export function flattenState<TypeData>(ctx: TreeWidget<any>): IStackTicket | State & TypeData {
     const states = createTicket(ctx);
 
     if (ctx.isReInvoke) {
-        return nextTicket<IState & TypeData>(states);
+        return nextTicket<State & TypeData>(states);
     }
 
     return states;

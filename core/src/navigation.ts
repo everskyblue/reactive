@@ -1,14 +1,14 @@
 import type {
-    ReactiveCreateElement,
+    TreeWidget,
     ReactivePropsWithChild,
-} from "./contracts";
+} from "./TreeWidget";
 import { exec } from "./hooks";
 import { useState } from "./hooks/useState";
 
 
 interface RouteProps {
     path: string;
-    render: ReactiveCreateElement<any>;
+    render: TreeWidget<any>;
 }
 
 function hashChange(routes: RouteProps[]) {
@@ -26,7 +26,7 @@ export function Routes({
     sharedContext
 }: ReactivePropsWithChild<any>) {
     const routes: RouteProps[] = children.map(
-        (child: ReactiveCreateElement<any>) =>
+        (child: TreeWidget<any>) =>
             child.properties as unknown as RouteProps
     );
     const routeState = useState(hashChange(routes), this);

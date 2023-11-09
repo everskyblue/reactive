@@ -1,17 +1,14 @@
-import type {
-    IWidget,
-    ReactiveCreateElement,
-    ReactiveCreateElementOfType,
-    TypeElement,
+import type { IWidget } from "./contracts";
+import {
+    TreeWidget,
+    TreeWidgetOfType,
+    TypeChildNode,
     ReactiveProps,
-} from "./contracts";
-import { TreeWidget } from "./TreeWidget";
+} from "./TreeWidget";
 
 let widgedHelper: IWidget;
 
-function toArray<TypeWidget = any>(
-    data: TypeElement<TypeWidget> | TypeElement<TypeWidget>[]
-) {
+function toArray(data: TypeChildNode | TypeChildNode[]) {
     return Array.isArray(data) ? data : [data];
 }
 
@@ -35,9 +32,9 @@ export class Reactive {
      * @param elements tree childs
      * @returns
      */
-    static Fragment<TypeWidget = any>(
-        {children}: ReactiveProps<any, TypeWidget>
-    ): TypeElement<TypeWidget>[] {
+    static Fragment<TypeWidget = any>({
+        children,
+    }: ReactiveProps<any, TypeWidget>): TypeChildNode[] {
         return children;
     }
 
@@ -52,19 +49,20 @@ export class Reactive {
      * @returns
      */
     static createElement<TypeWidget = any>(
-        type: ReactiveCreateElementOfType<TypeWidget>,
+        type: TreeWidgetOfType<TypeWidget>,
         properties: Record<string, any>,
-        ...childs: TypeElement<TypeWidget>[]
-    ): ReactiveCreateElement<TypeWidget> {
-        const treeWidget = Object.seal(new TreeWidget(type, properties, widgedHelper, childs));
+        ...childs: TypeChildNode[]
+    ): TreeWidget<TypeWidget> {
+        const treeWidget = Object.seal(
+            new TreeWidget(type, properties, widgedHelper, childs)
+        );
         if (typeof type === "string") {
             treeWidget.node = widgedHelper.createWidget(type);
             treeWidget.childs = toArray(childs);
-        } 
+        }
         return treeWidget;
     }
 }
-
 
 /**
  * encargada de renderizar todo el árbol de la aplicación
@@ -77,7 +75,7 @@ export class Reactive {
  */
 export function render<TypeWidget = any>(
     root: string,
-    component: ReactiveCreateElement<TypeWidget>
+    component: TreeWidget<TypeWidget>
 ) {
     component.node = widgedHelper.querySelector(root);
     component.render();

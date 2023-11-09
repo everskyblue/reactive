@@ -1,5 +1,5 @@
+import { TreeWidget } from "../TreeWidget";
 import { State } from "../State";
-import { IState, ReactiveCreateElement } from "../contracts";
 import { flattenState } from "./flattenState";
 
 
@@ -16,7 +16,7 @@ export type ExecuteReceivedProps<T = any> = {
 export type Executeprops<T = any> = ExecuteReceivedProps & {
     callback?: (
         properties: ExecuteReceivedProps,
-        childs?: ReactiveCreateElement<T>
+        childs?: TreeWidget<T>
     ) => any;
 };
 
@@ -43,12 +43,12 @@ function bind(target: State, key: string) {
  */
 export function useState<TypeData = any, TypeWidget = any>(
     data?: TypeData,
-    reInvokeCtx?: ReactiveCreateElement<TypeWidget>
-): TypeData & IState {
+    reInvokeCtx?: TreeWidget<TypeWidget>
+): TypeData & State {
     const flatten = reInvokeCtx ? flattenState<TypeData>(reInvokeCtx) : undefined;
     
     if (flatten instanceof State) {
-        return flatten as TypeData & IState;
+        return flatten as TypeData & State;
     }
 
     const proxies = new Proxy(new State(data, reInvokeCtx), {
@@ -112,7 +112,7 @@ export function useState<TypeData = any, TypeWidget = any>(
  */
 export function Execute(
     props: Executeprops | null,
-    children: ReactiveCreateElement<any>
+    children: TreeWidget<any>
 ) {
     const { state, callback, option } = props ?? ({} as Executeprops);
     if (callback) return callback.call(this, { state, option, children });

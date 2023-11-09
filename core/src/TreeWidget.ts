@@ -1,27 +1,59 @@
-import {
-    IMapListeners,
-    IState,
-    IStoreState,
-    IWidget,
-    IWidgetUpdate,
-    ReactiveCreateElement,
-    ReactiveCreateElementOfType,
-    TypeElement,
-} from "./contracts";
 import { Reactive } from "./reactive";
-import { State } from "./State";
+import { State, StoreState } from "./State";
 import { Listeners, MapListeners } from "./listener";
+import { IWidget, IWidgetUpdate } from "./contracts";
 
-const storeProxy: Set<IState> = new Set();
+const storeProxy: Set<State> = new Set();
 const ALLOWED_TYPES = ["string", "number", "boolean"];
 
+/**
+ * tipos de datos de que puede tener el arbol de component
+ *
+ * types of data that the component tree can have
+ */
+export type TypeChildNode =
+    | string
+    | boolean
+    | number
+    | State
+    | TreeWidget<any>;
+
+/**
+ * type de valores de las etiquetas jsx
+ *
+ * jsx tag values type
+ */
+export type TreeWidgetOfType<AnyWidget> =
+    | string
+    | ((
+          props: ReactiveProps
+          //childs?: TypeChildNode<AnyWidget>
+      ) => TreeWidget<AnyWidget> | TreeWidget<AnyWidget>[]);
+
+export type ReactivePropsWithChild<
+    Properties = {},
+    AnyWidget = any
+> = Properties & {
+    children?: TypeChildNode[];
+};
+
+export type ReactivePropsSharedCtx<
+    Properties = {},
+    Reference = any
+> = Properties & { shareContext: { id: any; ref: Reference } };
+
+export type ReactiveProps<Properties = {}, AnyWidget = any> = Omit<
+    ReactivePropsWithChild<Properties, AnyWidget>,
+    "children"
+>;
+
 function toArray<TypeWidget = any>(
-    data: TypeElement<TypeWidget> | TypeElement<TypeWidget>[]
+    data: TypeChildNode | TypeChildNode[]
 ) {
     return Array.isArray(data) ? data : [data];
 }
 
-function getNodeWidgetChild(ctx: ReactiveCreateElement<any>) {
+function getNodeWidgetChild(ctx: TreeWidget<any>) {
     if (typeof ctx.type === "string") return toArray(ctx.node);
     return ctx.childs.map(recursive).flat();
 }
@@ -34,7 +66,7 @@ function recursive(ctx: TreeWidget) {
 }
 
 function reCreateElement<TypeWidget>(
-    widget: ReactiveCreateElement<TypeWidget>
+    widget: TreeWidget<TypeWidget>
 ) {
     return Reactive.createElement(
         widget.type,
@@ -43,7 +75,7 @@ function reCreateElement<TypeWidget>(
     );
 }
 
-function reCreateElementChild(widgetChilds: TypeElement[]): TypeElement[] {
+function reCreateElementChild(widgetChilds: TypeChildNode[]) {
     return widgetChilds.map((child) => {
         console.log(child);
 
@@ -67,8 +99,8 @@ function each(ctx: TreeWidget) {
 }
 
 function getParent<TypeWidget = any>(
-    ctx: ReactiveCreateElement<TypeWidget> | State
-): ReactiveCreateElement<TypeWidget> | any {
+    ctx: TreeWidget<TypeWidget> | State
+): TreeWidget<TypeWidget> | any {
     let parent = ctx;
 
     //@ts-ignore
@@ -87,7 +119,7 @@ function mergeProperties(withChild: boolean = false) {
     }
 
     for (const key in this.properties) {
-        const is = key === 'shareContext';
+        const is = key === "shareContext";
         if (withChild && is) {
             props["sharedContext"] = this.properties[key];
         } else {
@@ -98,29 +130,29 @@ function mergeProperties(withChild: boolean = false) {
     return props;
 }
 
-export class TreeWidget<TypeWidget = any>
-    implements ReactiveCreateElement<TypeWidget>
-{
+export class TreeWidget<TypeWidget = any> {
     isReInvoke: boolean = false;
-    sharedContext: IMapListeners = new MapListeners();
+
+    sharedContext: MapListeners = new MapListeners();
 
     node: TypeWidget = undefined;
-    parentNode: ReactiveCreateElement<TypeWidget> = undefined;
 
-    childs: TypeElement<TypeWidget>[] = undefined;
+    parentNode: TreeWidget<TypeWidget> = undefined;
+
+    childs: TypeChildNode[] = undefined;
 
     constructor(
-        public type: ReactiveCreateElementOfType<TypeWidget>,
+        public type: TreeWidgetOfType<TypeWidget>,
         public properties: Record<string, any> & {
             shareContext?: { id: string | number; ref: any };
         },
         public widgedHelper: IWidget,
-        public originalChilds: TypeElement<TypeWidget>[]
+        public originalChilds: TypeChildNode[]
     ) {
         if (!properties) {
             this.properties = {} as any;
         }
-        
+
         const shareContext = this.properties.shareContext;
 
         if (shareContext) {
@@ -129,10 +161,9 @@ export class TreeWidget<TypeWidget = any>
                 new Listeners(shareContext.ref)
             );
         }
-
     }
 
-    #throwerIfNotExecute<TypeWidget = any>(def: TypeElement<TypeWidget>) {
+    #throwerIfNotExecute<TypeWidget = any>(def: TypeChildNode) {
         if (def instanceof State) {
             if (!this.#isStringableState(def)) {
                 throw new Error(
@@ -158,8 +189,8 @@ export class TreeWidget<TypeWidget = any>
         return ALLOWED_TYPES.includes(typeof def.data);
     }
 
-    #onUpdate(storeState?: IStoreState) {
-        const ctxParentNode: ReactiveCreateElement<TypeWidget> =
+    #onUpdate(storeState?: StoreState<TypeWidget>) {
+        const ctxParentNode: TreeWidget<TypeWidget> =
             typeof this.type === "function" ? getParent(this) : this;
         const childs = ctxParentNode.childs;
         const findAllIndex: number[] = [];
@@ -196,8 +227,8 @@ export class TreeWidget<TypeWidget = any>
                 typeof def.type == "function"
             ) {
                 def.type(def.properties) as unknown as State;
-                updateInfo.state = storeState.rendering.map((def) =>
-                    def.render().node
+                updateInfo.state = storeState.rendering.map(
+                    (def) => def.render().node
                 );
                 updateInfo.totalChilds = storeState.previousData.length;
                 /* setTimeout(() => {
@@ -209,10 +240,10 @@ export class TreeWidget<TypeWidget = any>
         });
     }
 
-    #onUpdateSuperCtx(superCtx: ReactiveCreateElement<TypeWidget>) {
+    #onUpdateSuperCtx(superCtx: TreeWidget<TypeWidget>) {
         superCtx.isReInvoke = true;
         const { type } = superCtx;
-        const newRender: ReactiveCreateElement<TypeWidget> = (
+        const newRender: TreeWidget<TypeWidget> = (
             type as Function
         ).call(superCtx, mergeProperties.call(superCtx, true));
 
@@ -230,7 +261,7 @@ export class TreeWidget<TypeWidget = any>
     }
 
     #renderChild() {
-        const ctxWidget: ReactiveCreateElement<TypeWidget> =
+        const ctxWidget: TreeWidget<TypeWidget> =
             this.getNodeWidget();
 
         this.childs.forEach((child, index) => {
@@ -244,11 +275,11 @@ export class TreeWidget<TypeWidget = any>
 
                 if (this.sharedContext.size) {
                     if (!child.properties.sharedContext) {
-                         child.properties.sharedContext = {};
+                        child.properties.sharedContext = {};
                     }
                     this.sharedContext.forEach((ref, id) => {
-                            child.sharedContext.set(id, ref);
-                            child.properties.sharedContext[id] = ref;
+                        child.sharedContext.set(id, ref);
+                        child.properties.sharedContext[id] = ref;
                     });
                 }
 
@@ -282,7 +313,7 @@ export class TreeWidget<TypeWidget = any>
     }
 
     #renderDataState<TypeWidget = any>(
-        ctx: ReactiveCreateElement<TypeWidget>,
+        ctx: TreeWidget<TypeWidget>,
         parent: TypeWidget,
         state: State
     ) {
@@ -292,9 +323,9 @@ export class TreeWidget<TypeWidget = any>
             Array.isArray(storeState.rendering)
         ) {
             (storeState.rendering ?? storeState.data).forEach(
-                (def: ReactiveCreateElement<TypeWidget>) => {
-                    console.log(storeState,def);
-                    
+                (def: TreeWidget<TypeWidget>) => {
+                    console.log(storeState, def);
+
                     this.widgedHelper.appendWidget(
                         parent,
                         def instanceof TreeWidget ? def.render().node : def
@@ -306,7 +337,7 @@ export class TreeWidget<TypeWidget = any>
         }
     }
 
-    #reRender(storeState: IStoreState) {
+    #reRender(storeState: StoreState<TypeWidget>) {
         return storeState.superCtx
             ? this.#onUpdateSuperCtx(storeState.superCtx)
             : this.#onUpdate(storeState);
@@ -337,7 +368,12 @@ export class TreeWidget<TypeWidget = any>
         return this;
     }
 
-    getNodeWidget(): ReactiveCreateElement<TypeWidget> {
+    /**
+     * el nodo es un objeto que representa la vista
+     * si no hay significa que es una funcion
+     * buscara el objecto de que representa la vista
+     */
+    getNodeWidget(): TreeWidget<TypeWidget> {
         if (typeof this.node === "object") {
             return this;
         }
@@ -348,7 +384,7 @@ export class TreeWidget<TypeWidget = any>
         return this.sharedContext.get(id);
     }
 
-    #rewriteMethod(...states: IState[]) {
+    #rewriteMethod(...states: State[]) {
         for (const state of states) {
             const set = state.set.bind(state);
             const append = state.append.bind(state);
@@ -366,7 +402,7 @@ export class TreeWidget<TypeWidget = any>
         }
     }
 
-    implementStates(...states: IState[]) {
+    implementStates(...states: State[]) {
         this.#rewriteMethod(...states);
     }
 }

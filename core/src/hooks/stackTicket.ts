@@ -1,4 +1,4 @@
-import { ReactiveCreateElement } from "../contracts";
+import { TreeWidget } from "src/TreeWidget";
 import { HookStore } from "./hookStore";
 
 HookStore.createStore("tickets");
@@ -17,7 +17,7 @@ export function nextTicket<Type = any>(stack: IStackTicket): Type {
     return currentValue;
 }
 
-export function createTicket(ctx: ReactiveCreateElement<any>): IStackTicket {
+export function createTicket(ctx: TreeWidget<any>): IStackTicket {
     if (!HookStore.tickets.has(ctx)) {
         HookStore.tickets.set(ctx, {
             ticket: 0,

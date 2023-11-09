@@ -1,10 +1,10 @@
-import { ReactiveCreateElement } from "../contracts";
+import { TreeWidget } from "src/TreeWidget";
 import { HookStore } from "./hookStore";
 import {createTicket, nextTicket} from './stackTicket'
 
 HookStore.createStore("callbacks");
 
-export function useCallback(callback: (...args: any[]) => any, ctx: ReactiveCreateElement<any>) {
+export function useCallback(callback: (...args: any[]) => any, ctx: TreeWidget<any>) {
     const callbacks = createTicket(ctx);
 
     if (ctx.isReInvoke) {

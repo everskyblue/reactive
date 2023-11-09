@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "baseUrl": "core",
+        "baseUrl": ".",
         "target": "ES2016",
         "isolatedModules": true,
         "moduleResolution": "node",

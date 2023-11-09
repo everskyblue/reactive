@@ -1,4 +1,4 @@
-import { ReactiveCreateElement, IStoreState, IState } from "./contracts";
+import { TreeWidget } from "./TreeWidget";
 
 /**
  * tipo acción del estado para indicar una accion de los lementos y crear cambios: creado, nuevo y actualizado
@@ -19,19 +19,21 @@ export enum StateAction {
      * manejo interno del renderizado si el estado a devuelto un nuevo objecto de valores
      *
      * internal handling of rendering if the state has returned a new values object
-     * @see {@link ReactiveCreateElement}
+     * @see {@link TreeWidget}
      */
     PREPEND,
 }
 
 /**
+ * almacena cada actualizacion de estado
  *
+ * stores each status update
  */
-export class StoreState<TypeWidget> implements IStoreState {
-    public rendering: ReactiveCreateElement<any>[];
+export class StoreState<TypeWidget> {
+    public rendering: TreeWidget<any>[];
     private _current: any;
     private store: any[] = [];
-    public parentNode: ReactiveCreateElement<any>;
+    public parentNode: TreeWidget<any>;
 
     /**
      *
@@ -40,7 +42,7 @@ export class StoreState<TypeWidget> implements IStoreState {
      * @param TYPE_ACTION default action create
      */
     constructor(
-        public superCtx: ReactiveCreateElement<TypeWidget>,
+        public superCtx: TreeWidget<TypeWidget>,
         data: any,
         public TYPE_ACTION: StateAction = StateAction.CREATE
     ) {
@@ -64,12 +66,14 @@ export class StoreState<TypeWidget> implements IStoreState {
             this.rendering = v;
         }
 
-        // not ReactiveCreateElement<any>[]
+        // not TreeWidget<any>[]
         if (this.TYPE_ACTION !== StateAction.PREPEND) {
             if (this.store.includes(v)) return;
             // So you can get the above data correctly and you can update the widget
             if (this.TYPE_ACTION === StateAction.UPDATE) {
-                this.store.push([...current, ...this._current]);
+                this.store.push(
+                    (this._current = [...current, ...this._current])
+                );
             } else {
                 this.store.push(this._current);
             }
@@ -89,7 +93,7 @@ export class StoreState<TypeWidget> implements IStoreState {
      * get previous data It is used to control the difference between current and new data.
      */
     public get previousData(): any {
-        return this.store.at(this.store.indexOf(this.data) - 1);
+        return this.store.at(-1);
     }
 
     toString() {
@@ -97,7 +101,12 @@ export class StoreState<TypeWidget> implements IStoreState {
     }
 }
 
-export class State<TypeWidget = any> implements IState, Record<string, any> {
+/**
+ * controla el estado y la vista
+ *
+ * controls state and view
+ */
+export class State<TypeWidget = any> implements Record<string, any> {
     proxySelf: State;
 
     /**
@@ -118,7 +127,7 @@ export class State<TypeWidget = any> implements IState, Record<string, any> {
      * }
      * ```
      */
-    currentParentNode: ReactiveCreateElement<any>;
+    currentParentNode: TreeWidget<any>;
 
     /**
      * cada vez se cambie el elemento padre del estado modifica a un nuevo almacenamiento de estado
@@ -129,10 +138,10 @@ export class State<TypeWidget = any> implements IState, Record<string, any> {
      */
     public currentStoreState: StoreState<TypeWidget>;
 
-    public store: Map<ReactiveCreateElement<any>, StoreState<TypeWidget>> =
+    public store: Map<TreeWidget<any>, StoreState<TypeWidget>> =
         new Map();
 
-    public get parentNode(): ReactiveCreateElement<any> {
+    public get parentNode(): TreeWidget<any> {
         return this.currentParentNode;
     }
 
@@ -141,7 +150,7 @@ export class State<TypeWidget = any> implements IState, Record<string, any> {
      *
      * update the node the status is on
      */
-    public set parentNode(parent: ReactiveCreateElement<any>) {
+    public set parentNode(parent: TreeWidget<any>) {
         this.currentParentNode = parent;
         if (
             typeof this.currentStoreState.parentNode !== "undefined" &&
@@ -170,7 +179,7 @@ export class State<TypeWidget = any> implements IState, Record<string, any> {
 
     constructor(
         data: any,
-        private superCtx: ReactiveCreateElement<TypeWidget>
+        private superCtx: TreeWidget<TypeWidget>
     ) {
         this.currentStoreState = new StoreState<TypeWidget>(superCtx, data);
     }
