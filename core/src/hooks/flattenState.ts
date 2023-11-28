@@ -8,7 +8,7 @@ HookStore.createStore("states");
 export function flattenState<TypeData>(ctx: TreeWidget<any>): IStackTicket | State & TypeData {
     const states = createTicket(ctx);
 
-    if (ctx.isReInvoke) {
+    if (states.reInvoke) {
         return nextTicket<State & TypeData>(states);
     }
 

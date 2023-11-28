@@ -53,18 +53,18 @@ export function useState<TypeData = any, TypeWidget = any>(
 
     const proxies = new Proxy(new State(data, reInvokeCtx), {
         get(target, key: string) {
+            if (key === "flatten") return flatten;
             if (key in target) {
                 return bind(target, key);
-            } else if (key in target.data) {
+            } else if (typeof target.data[key] !== 'undefined') {
                 // cuando es un estado que no se añade a la vista retorna el dato original pedido
                 if (
                     !Array.isArray(target.data) &&
-                    target.data instanceof Object &&
-                    !target.parentNode
+                    target.data instanceof Object //&& !target.parentNode
                 ) {
                     return target.data[key];
                 }
-
+                
                 /**
                  * si la data es una function, devuele una function
                  * para obtener sus nuevos valores
@@ -74,9 +74,14 @@ export function useState<TypeData = any, TypeWidget = any>(
                  * More suitable for Array.map that returns a view
                  */
                 return typeof target.data[key] === "function"
-                    ? (...args: any[]) =>  target.$setReturnData(
-                            target.data[key].apply(target.data, args)
-                      )
+                    ? (...args: any[]) => {
+                        const newValue = target.data[key].apply(target.data, args);
+                        if (typeof newValue !== 'undefined') {
+                            return target.$setReturnData(
+                                target.data[key].apply(target.data, args)
+                            );
+                        }
+                    }
                     : proxies;
             } else {
                 throw new Error("error proxy " + key);
@@ -84,6 +89,10 @@ export function useState<TypeData = any, TypeWidget = any>(
         },
         set(target, key, newValue) {
             if (key in target) {
+                if (key === "set" || key === "append") {
+                    
+                }
+            
                 target[key] = newValue;
             } else if (key in target.data) {
                 target.data[key] = newValue;
@@ -93,8 +102,6 @@ export function useState<TypeData = any, TypeWidget = any>(
             return true;
         },
     }) as TypeData & State;
-
-    proxies.addProxySelf(proxies);
 
     if (typeof flatten === 'object') {
         flatten.queue.push(proxies);

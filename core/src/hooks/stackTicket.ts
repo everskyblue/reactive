@@ -6,6 +6,7 @@ HookStore.createStore("tickets");
 export interface IStackTicket {
     ticket: number;
     queue: any[];
+    reInvoke: boolean;
 }
 
 export function nextTicket<Type = any>(stack: IStackTicket): Type {
@@ -20,6 +21,7 @@ export function nextTicket<Type = any>(stack: IStackTicket): Type {
 export function createTicket(ctx: TreeWidget<any>): IStackTicket {
     if (!HookStore.tickets.has(ctx)) {
         HookStore.tickets.set(ctx, {
+            reInvoke: false,
             ticket: 0,
             queue: [],
         });

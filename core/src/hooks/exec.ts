@@ -6,6 +6,7 @@ HookStore.createStore("memo");
 
 export function exec(callback: (...args: any[]) => any, ctx: TreeWidget<any>): typeof callback {
     const memo = useCallback(callback, ctx);
+    
     if (!HookStore.memo.has(memo)) {
         HookStore.memo.set(memo, false);
     }

@@ -6,8 +6,8 @@ HookStore.createStore("callbacks");
 
 export function useCallback(callback: (...args: any[]) => any, ctx: TreeWidget<any>) {
     const callbacks = createTicket(ctx);
-
-    if (ctx.isReInvoke) {
+    
+    if (callbacks.reInvoke) {
         return nextTicket(callbacks);
     }
 
