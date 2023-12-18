@@ -1,7 +1,7 @@
-import { TreeWidget } from "src/TreeWidget";
+import { TreeWidget } from "../TreeWidget";
 import { HookStore } from "./hookStore";
 import { IStackTicket, createTicket, nextTicket } from "./stackTicket";
-import { State } from "src/State";
+import { State } from "../State";
 
 HookStore.createStore("states");
 

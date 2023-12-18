@@ -64,7 +64,7 @@ export function useState<TypeData = any, TypeWidget = any>(
                 ) {
                     return target.data[key];
                 }
-                
+
                 /**
                  * si la data es una function, devuele una function
                  * para obtener sus nuevos valores
@@ -90,9 +90,9 @@ export function useState<TypeData = any, TypeWidget = any>(
         set(target, key, newValue) {
             if (key in target) {
                 if (key === "set" || key === "append") {
-                    
+
                 }
-            
+
                 target[key] = newValue;
             } else if (key in target.data) {
                 target.data[key] = newValue;

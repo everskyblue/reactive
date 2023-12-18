@@ -1,4 +1,4 @@
-import { TreeWidget } from "src/TreeWidget";
+import { TreeWidget } from "../TreeWidget";
 import { HookStore } from "./hookStore";
 import {createTicket, nextTicket} from './stackTicket'
 

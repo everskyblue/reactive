@@ -1,4 +1,4 @@
-import { TreeWidget } from "src/TreeWidget";
+import { TreeWidget } from "../TreeWidget";
 
 const store = new Map<string, Map<TreeWidget<any>, any>>();
 

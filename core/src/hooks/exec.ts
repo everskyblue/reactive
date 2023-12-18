@@ -1,6 +1,6 @@
 import { useCallback } from "./useCallback";
 import { HookStore } from "./hookStore";
-import { TreeWidget } from "src/TreeWidget";
+import { TreeWidget } from "../TreeWidget";
 
 HookStore.createStore("memo");
 
