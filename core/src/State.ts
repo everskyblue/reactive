@@ -100,7 +100,10 @@ export class StoreState<TypeWidget> {
         return this.data?.toString() ?? "";
     }
 }
-
+function setData(newValue: any, storeState: StoreState<any>, action: StateAction) {
+    storeState.TYPE_ACTION = StateAction.NEW;
+    storeState.data = newValue;
+}
 /**
  * controla el estado y la vista
  *
@@ -190,6 +193,7 @@ export class State<TypeWidget = any> implements Record<string, any> {
      */
     addProxySelf(proxy: State) {
         this.proxySelf = proxy;
+        return this;
     }
 
     /**
@@ -198,12 +202,7 @@ export class State<TypeWidget = any> implements Record<string, any> {
      * new state
      */
     set(newValue: any) {
-        setData(this.currentStoreState);
-
-        function setData(storeState: StoreState<TypeWidget>) {
-            storeState.TYPE_ACTION = StateAction.NEW;
-            storeState.data = newValue;
-        }
+        setData(newValue, this.currentStoreState, StateAction.NEW);
     }
 
     /**
@@ -212,8 +211,15 @@ export class State<TypeWidget = any> implements Record<string, any> {
      * push new data to array
      */
     append(values: any[]) {
-        this.currentStoreState.TYPE_ACTION = StateAction.UPDATE;
-        this.currentStoreState.data = values;
+        //this.currentStoreState.TYPE_ACTION = StateAction.UPDATE;
+        //this.currentStoreState.data = values;
+        setData(
+            values,
+            this.proxySelf
+                ? this.proxySelf.currentStoreState
+                : this.currentStoreState,
+            StateAction.UPDATE
+        );
     }
 
     /**
@@ -248,7 +254,16 @@ export class State<TypeWidget = any> implements Record<string, any> {
     $setReturnData(value: any) {
         this.currentStoreState.TYPE_ACTION = StateAction.PREPEND;
         this.currentStoreState.data = value;
-        return value;
+        return this;
+    }
+    
+    $map(callback: (data: any, index: number) => any) {
+        if (Array.isArray(this.data)) {
+            this.currentStoreState.TYPE_ACTION = StateAction.PREPEND;
+            return (this.currentStoreState.data = this.data.map(callback));
+        }
+        
+        throw new Error('data is not array');
     }
 
     /**

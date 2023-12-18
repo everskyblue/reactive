@@ -30,7 +30,7 @@ export interface IWidget<TypeWidget = any> {
     resetWidgets?: (widgets: TypeWidget[]) => void;
     setText(widget: TypeWidget, str: string): void;
     createText(str: string | number | boolean): TypeWidget | Text;
-    createWidget(type: string): TypeWidget;
+    createWidget(type: string, ns: boolean): SVGElement | TypeWidget;
     appendWidget(
         parent: TypeWidget,
         childWidget: TypeWidget | TypeWidget[]

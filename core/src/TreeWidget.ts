@@ -1,9 +1,13 @@
-import { Reactive } from "./reactive";
 import { State, StoreState } from "./State";
-import { Listeners, MapListeners } from "./listener";
 import { IWidget, IWidgetUpdate } from "./contracts";
+import {
+    getNodeWidgetChild,
+    getParent,
+    mergeProperties,
+    toArray,
+} from "./utils";
+import { rewriteMethodState } from "./utils";
 
-const storeProxy: Set<State> = new Set();
 const ALLOWED_TYPES = ["string", "number", "boolean"];
 
 /**
@@ -11,12 +15,7 @@ const ALLOWED_TYPES = ["string", "number", "boolean"];
  *
  * types of data that the component tree can have
  */
-export type TypeChildNode =
-    | string
-    | boolean
-    | number
-    | State
-    | TreeWidget<any>;
+export type TypeChildNode = string | boolean | number | State | TreeWidget<any>;
 
 /**
  * type de valores de las etiquetas jsx
@@ -26,114 +25,28 @@ export type TypeChildNode =
 export type TreeWidgetOfType<AnyWidget> =
     | string
     | ((
-          props: ReactiveProps
-          //childs?: TypeChildNode<AnyWidget>
-      ) => TreeWidget<AnyWidget> | TreeWidget<AnyWidget>[]);
+        props: ReactiveProps
+        //childs?: TypeChildNode<AnyWidget>
+    ) => TreeWidget<AnyWidget> | TreeWidget<AnyWidget>[]);
 
 export type ReactivePropsWithChild<
-    Properties = {},
-    AnyWidget = any
+    Properties = {}
 > = Properties & {
     children?: TypeChildNode[];
 };
 
-export type ReactivePropsSharedCtx<
-    Properties = {},
-    Reference = any
-> = Properties & { shareContext: { id: any; ref: Reference } };
-
-export type ReactiveProps<Properties = {}, AnyWidget = any> = Omit<
-    ReactivePropsWithChild<Properties, AnyWidget>,
+export type ReactiveProps<Properties = {}> = Omit<
+    ReactivePropsWithChild<Properties>,
     "children"
 >;
 
-function toArray<TypeWidget = any>(
-    data: TypeChildNode | TypeChildNode[]
-) {
-    return Array.isArray(data) ? data : [data];
-}
-
-function getNodeWidgetChild(ctx: TreeWidget<any>) {
-    if (typeof ctx.type === "string") return toArray(ctx.node);
-    return ctx.childs.map(recursive).flat();
-}
-
-function recursive(ctx: TreeWidget) {
-    if (ctx.node) {
-        return ctx.node;
-    }
-    return each(ctx).flat();
-}
-
-function reCreateElement<TypeWidget>(
-    widget: TreeWidget<TypeWidget>
-) {
-    return Reactive.createElement(
-        widget.type,
-        widget.properties,
-        ...reCreateElementChild(widget.childs)
-    );
-}
-
-function reCreateElementChild(widgetChilds: TypeChildNode[]) {
-    return widgetChilds.map((child) => {
-        console.log(child);
-
-        if (child instanceof TreeWidget) {
-            return reCreateElement(child);
-        }
-        return child;
-    });
-}
-
-function each(ctx: TreeWidget) {
-    const v = [];
-    for (const child of ctx.childs) {
-        let r = child;
-        if (child instanceof TreeWidget) {
-            r = recursive(child);
-        }
-        v.push(r);
-    }
-    return v;
-}
-
-function getParent<TypeWidget = any>(
-    ctx: TreeWidget<TypeWidget> | State
-): TreeWidget<TypeWidget> | any {
-    let parent = ctx;
-
-    //@ts-ignore
-    while (parent && typeof parent.node !== "object") {
-        parent = parent.parentNode;
-    }
-
-    return parent;
-}
-
-function mergeProperties(withChild: boolean = false) {
-    const props = {} as any;
-
-    if (withChild) {
-        props.children = this.originalChilds;
-    }
-
-    for (const key in this.properties) {
-        const is = key === "shareContext";
-        if (withChild && is) {
-            props["sharedContext"] = this.properties[key];
-        } else {
-            props[key] = this.properties[key];
-        }
-    }
-
-    return props;
+const id = {
+    pos: 0,
+    current: 0
 }
 
 export class TreeWidget<TypeWidget = any> {
     isReInvoke: boolean = false;
-
-    sharedContext: MapListeners = new MapListeners();
 
     node: TypeWidget = undefined;
 
@@ -141,26 +54,30 @@ export class TreeWidget<TypeWidget = any> {
 
     childs: TypeChildNode[] = undefined;
 
+    readonly _id: number = id.pos;
+
+    private _ns: boolean = false;
+
+    private _fnparent: TreeWidget = undefined;
+
     constructor(
         public type: TreeWidgetOfType<TypeWidget>,
-        public properties: Record<string, any> & {
-            shareContext?: { id: string | number; ref: any };
-        },
+        public properties: Record<string, any>,
         public widgedHelper: IWidget,
         public originalChilds: TypeChildNode[]
     ) {
-        if (!properties) {
-            this.properties = {} as any;
+        if (typeof this.type === 'string' && this.type === 'svg') {
+            this._ns = true;
         }
 
-        const shareContext = this.properties.shareContext;
-
-        if (shareContext) {
-            this.sharedContext.set(
-                shareContext.id,
-                new Listeners(shareContext.ref)
-            );
+        for (let child of originalChilds) {
+            if (this._ns && child instanceof TreeWidget)
+                child._ns = true;
+            if (typeof this.type === 'function' && child instanceof TreeWidget)
+                child._fnparent = this;
         }
+
+        id.pos++;
     }
 
     #throwerIfNotExecute<TypeWidget = any>(def: TypeChildNode) {
@@ -178,58 +95,62 @@ export class TreeWidget<TypeWidget = any> {
             throw new Error("is not a [function Execute] ");
         } */
     }
-
-    #isStringableState(def: any) {
-        if (Array.isArray(def.data)) {
+    
+    /**
+     * comprueba si son datos crudos
+     */
+    #isStringableState(state: State) {
+        if (Array.isArray(state.data)) {
             return (
-                (def.data as any[]).some((data) => typeof data === "object") ===
+                (state.data as any[]).some((data) => typeof data === "object") ===
                 false
             );
         }
-        return ALLOWED_TYPES.includes(typeof def.data);
+        return ALLOWED_TYPES.includes(typeof state.data);
     }
-
-    #onUpdate(storeState?: StoreState<TypeWidget>) {
+    
+    /**
+     * actualiza los nodos 
+     */
+    #onUpdate(storeState: StoreState<TypeWidget>) {
         const ctxParentNode: TreeWidget<TypeWidget> =
             typeof this.type === "function" ? getParent(this) : this;
         const childs = ctxParentNode.childs;
-        const findAllIndex: number[] = [];
 
         // Find the matching indexes
-        childs.forEach((child, index) => {
-            if (
-                this === child ||
-                (child instanceof State && child.data === storeState.data)
-            ) {
-                findAllIndex.push(index);
-            }
-        });
-
-        findAllIndex.forEach((findIndex) => {
-            // get index
-            const def = childs.at(findIndex);
+        for (let index = 0, child: TypeChildNode; child = childs[index]; index++) {
+            if (this !== child || !(child instanceof State && child.data === storeState.data)) continue;
             // Generate an error if the state does not have an enveloping function
-            this.#throwerIfNotExecute(def);
+            this.#throwerIfNotExecute(child);
             // info update
             const updateInfo = {
                 isStringable: false,
                 node: ctxParentNode.node,
                 typeAction: storeState.TYPE_ACTION,
-                updateIndex: findIndex,
+                updateIndex: index,
             } as IWidgetUpdate<TypeWidget>;
 
-            if (def instanceof State) {
-                updateInfo.isStringable = true;
-                updateInfo.state = storeState.data;
-                updateInfo.totalChilds = childs.length;
-            } else if (
-                typeof def === "object" &&
-                typeof def.type == "function"
+            if (child instanceof State) {
+                Object.assign(updateInfo, {
+                    isStringable: true,
+                    state: storeState.data,
+                    totalChilds: childs.length,
+                });
+            }
+            if (
+                child instanceof TreeWidget &&
+                typeof child.type == "function"
             ) {
-                def.type(def.properties) as unknown as State;
-                updateInfo.state = storeState.rendering.map(
-                    (def) => def.render().node
-                );
+                const nwchilds = child.type.call(this,
+                    mergeProperties.call(this, true)
+                ) as unknown as any;
+                if (storeState.parentNode) {
+                    updateInfo.state =
+                        storeState.rendering
+                            ?.map((def) => getNodeWidgetChild(def.render()))
+                            .flat() ?? getNodeWidgetChild(storeState.data); //?? (storeState.data instanceof TreeWidget) ? [storeState.data.render()] : (()=> {throw "error"})();
+                } else {
+                }
                 updateInfo.totalChilds = storeState.previousData.length;
                 /* setTimeout(() => {
                     storeState.rendering = undefined;
@@ -237,50 +158,73 @@ export class TreeWidget<TypeWidget = any> {
             }
 
             this.widgedHelper.updateWidget(updateInfo);
-        });
+        }
     }
 
     #onUpdateSuperCtx(superCtx: TreeWidget<TypeWidget>) {
         superCtx.isReInvoke = true;
-        const { type } = superCtx;
-        const newRender: TreeWidget<TypeWidget> = (
-            type as Function
+        const newRender: TreeWidget<TypeWidget> | TreeWidget<TypeWidget>[] = (
+            superCtx.type as Function
         ).call(superCtx, mergeProperties.call(superCtx, true));
+        const oldChilds: TypeWidget[] = getNodeWidgetChild(superCtx);
+        let nwChilds: TypeWidget[];
 
-        newRender.isReInvoke = true;
-        newRender.render();
-        const oldChilds = getNodeWidgetChild(superCtx);
-        const nodes = getNodeWidgetChild(newRender);
+        if (newRender instanceof TreeWidget) {
+            newRender.isReInvoke = true;
+            newRender.render();
+            nwChilds = getNodeWidgetChild(newRender);
+            newRender.parentNode = superCtx;
+        } else if (Array.isArray(newRender)) {
+            nwChilds = newRender.map((widget) =>
+                getNodeWidgetChild(widget.render()).at(0)
+            );
+        } else {
+            throw new Error("could not resolve nodes");
+        }
+
         this.widgedHelper.replaceChild(
             this.getNodeWidget().node,
-            nodes,
+            nwChilds,
             oldChilds
         );
-        newRender.parentNode = superCtx;
+        
         superCtx.childs = toArray(newRender);
     }
 
+    createNodeAndChilds() {
+        if (typeof this.type === "string") {
+            this.node = this.widgedHelper.createWidget(this.type, this._ns);
+            this.childs = toArray(this.originalChilds);
+        }
+    }
+
     #renderChild() {
-        const ctxWidget: TreeWidget<TypeWidget> =
-            this.getNodeWidget();
+        const ctxWidget: TreeWidget<TypeWidget> = this.getNodeWidget();
 
-        this.childs.forEach((child, index) => {
-            const isState = child instanceof State;
-            if (child instanceof TreeWidget) {
+        for (let child of this.childs) {
+            if (child instanceof TreeWidget || child instanceof State) {
                 child.parentNode = this;
+            }
 
-                if (this.isReInvoke) {
-                    child.isReInvoke = true;
+            if (child instanceof TreeWidget) {
+                /**
+                 * cuando es un componente todos los elementos hace referencia al componente padre
+                 */
+                if (typeof this.type === "function") {
+                    child._fnparent =
+                        this.type.name !== "Fragment" ? this : this._fnparent;
+                } else if (typeof this.type === "string" && this._fnparent) {
+                    child._fnparent = this._fnparent;
                 }
 
-                if (this.sharedContext.size) {
-                    if (!child.properties.sharedContext) {
-                        child.properties.sharedContext = {};
-                    }
-                    this.sharedContext.forEach((ref, id) => {
-                        child.sharedContext.set(id, ref);
-                        child.properties.sharedContext[id] = ref;
-                    });
+                if (typeof child.type === "string" && this._ns) {
+                    child._ns = true;
+                    child.createNodeAndChilds();
+                }
+
+                if (this.isReInvoke) {
+                    child.createNodeAndChilds();
+                    child.isReInvoke = true;
                 }
 
                 if (ctxWidget && typeof child.node === "object") {
@@ -289,15 +233,8 @@ export class TreeWidget<TypeWidget = any> {
 
                 child.render();
             } else {
-                if (isState) {
-                    if (
-                        !storeProxy.has(child) &&
-                        child.currentStoreState.superCtx
-                    ) {
-                        this.#rewriteMethod(child);
-                    } else if (!child.currentStoreState.superCtx) {
-                        this.#rewriteMethod(child);
-                    }
+                if (child instanceof State) {
+                    rewriteMethodState([child]);
 
                     if (ctxWidget) {
                         this.#renderDataState(this, ctxWidget.node, child);
@@ -309,10 +246,10 @@ export class TreeWidget<TypeWidget = any> {
                     );
                 }
             }
-        });
+        }
     }
 
-    #renderDataState<TypeWidget = any>(
+    #renderDataState <TypeWidget = any>(
         ctx: TreeWidget<TypeWidget>,
         parent: TypeWidget,
         state: State
@@ -324,8 +261,6 @@ export class TreeWidget<TypeWidget = any> {
         ) {
             (storeState.rendering ?? storeState.data).forEach(
                 (def: TreeWidget<TypeWidget>) => {
-                    console.log(storeState, def);
-
                     this.widgedHelper.appendWidget(
                         parent,
                         def instanceof TreeWidget ? def.render().node : def
@@ -380,29 +315,9 @@ export class TreeWidget<TypeWidget = any> {
         return getParent(this);
     }
 
-    getSharedContext(id: string) {
-        return this.sharedContext.get(id);
-    }
-
-    #rewriteMethod(...states: State[]) {
-        for (const state of states) {
-            const set = state.set.bind(state);
-            const append = state.append.bind(state);
-
-            state.set = (newValue: any) => {
-                set(newValue);
-                this.#reRender(state.currentStoreState);
-            };
-
-            state.append = (values: any[]) => {
-                append(values);
-                this.#reRender(state.currentStoreState);
-            };
-            storeProxy.add(state);
-        }
-    }
-
     implementStates(...states: State[]) {
-        this.#rewriteMethod(...states);
+        rewriteMethodState(states, state => {
+            this.#reRender(state.currentStoreState);
+        });
     }
 }

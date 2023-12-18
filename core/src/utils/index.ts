@@ -1,7 +1,36 @@
 import { TreeWidget, TypeChildNode } from "../TreeWidget";
-import { ICallbackContext } from "../contracts";
 import { exec, flattenState } from "../hooks";
 import { State } from "../State";
+
+export function addReInvocationState(state: any) {
+    let flatten = state.flatten;
+    if (state.currentStoreState.superCtx && !flatten) {
+        flatten = flattenState<any>(
+            state.currentStoreState.superCtx
+        );
+    }
+
+    if (flatten && !(flatten instanceof State)) flatten.reInvoke = true;
+}
+
+export function rewriteMethodState(states: State[], callback: (state: State) => void = () => {}) {
+    for (const state of states) {
+        const set = state.set.bind(state);
+        const append = state.append.bind(state);
+
+        state.set = (newValue: any) => {
+            addReInvocationState(state);
+            set(newValue);
+            callback(state);
+        };
+
+        state.append = (values: any[]) => {
+            addReInvocationState(state);
+            append(values);
+            callback(state);
+        };
+    }
+}
 
 export function implementStates(
     ...states: [states: State, ctx: TreeWidget<any>][] | State[]
@@ -9,7 +38,7 @@ export function implementStates(
     for (const values of states) {
         const [state, ctx] = Array.isArray(values) ? values : [values];
         const tree = state.currentStoreState.superCtx ?? ctx;
-        
+
         if (typeof tree === 'undefined') {
             throw new Error("el estado no tiene el contexto del componente");
         }

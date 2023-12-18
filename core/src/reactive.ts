@@ -3,14 +3,10 @@ import {
     TreeWidget,
     TreeWidgetOfType,
     TypeChildNode,
-    ReactiveProps,
+    ReactivePropsWithChild,
 } from "./TreeWidget";
 
 let widgedHelper: IWidget;
-
-function toArray(data: TypeChildNode | TypeChildNode[]) {
-    return Array.isArray(data) ? data : [data];
-}
 
 /**
  * añade un objeto que representa el manejo del nodo: crear, añadir, actualizar, eliminar y seleccionar
@@ -34,7 +30,7 @@ export class Reactive {
      */
     static Fragment<TypeWidget = any>({
         children,
-    }: ReactiveProps<any, TypeWidget>): TypeChildNode[] {
+    }: ReactivePropsWithChild): TypeChildNode[] {
         return children;
     }
 
@@ -54,12 +50,9 @@ export class Reactive {
         ...childs: TypeChildNode[]
     ): TreeWidget<TypeWidget> {
         const treeWidget = Object.seal(
-            new TreeWidget(type, properties, widgedHelper, childs)
+            new TreeWidget(type, properties || {}, widgedHelper, childs)
         );
-        if (typeof type === "string") {
-            treeWidget.node = widgedHelper.createWidget(type);
-            treeWidget.childs = toArray(childs);
-        }
+        treeWidget.createNodeAndChilds();
         return treeWidget;
     }
 }

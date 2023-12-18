@@ -1,6 +1,18 @@
 import type { IWidget, IWidgetUpdate, TextWidget } from "./contracts";
 import { StateAction } from "./State";
 
+type Element = SVGElement | HTMLElement;
+
+function toStringObject(value: any) {
+    let str = '';
+
+    for (const key in value) {
+        //
+    }
+
+    return str;
+}
+
 export class ReactiveText extends Text implements TextWidget {
     constructor(text: any) {
         super(text);
@@ -15,17 +27,17 @@ export class ReactiveText extends Text implements TextWidget {
     }
 }
 
-export class WidgetHelper implements IWidget<HTMLElement> {
-    resetWidgets = (widgets: HTMLElement[]) => {
+export class WidgetHelper {
+    resetWidgets = (widgets: Element[]) => {
         for (const element of widgets) {
             element.innerHTML = '';
         }
     }
 
     replaceChild(
-        widgetParent: HTMLElement,
-        newWidget: HTMLElement[],
-        oldWidget: HTMLElement[]
+        widgetParent: Element,
+        newWidget: Element[],
+        oldWidget: Element[]
     ): void {
         if (newWidget.length === oldWidget.length) {
             oldWidget.forEach((node, index) => {
@@ -43,7 +55,7 @@ export class WidgetHelper implements IWidget<HTMLElement> {
         }
     }
 
-    setText(widget: HTMLElement, str: string): void {
+    setText(widget: Element, str: string): void {
         widget.textContent = str;
     }
 
@@ -51,38 +63,40 @@ export class WidgetHelper implements IWidget<HTMLElement> {
         return new ReactiveText(str);
     }
 
-    createWidget(type: string): HTMLElement {
-        return document.createElement(type);
+    createWidget(type: string, ns: boolean): Element {
+        return ns ? document.createElementNS('http://www.w3.org/2000/svg', type) : document.createElement(type);
     }
 
     appendWidget(
-        parent: HTMLElement,
-        childWidget: HTMLElement | HTMLElement[]
+        parent: Element,
+        childWidget: Element | Element[]
     ): void {
         parent.append(
             ...(Array.isArray(childWidget) ? childWidget : [childWidget])
         );
     }
 
-    setProperties(parent: HTMLElement, props: Record<string, any>): void {
+    setProperties(parent: Element, props: Record<string, any>): void {
         for (const key in props) {
             const value = props[key];
             if (key.startsWith("on")) {
                 parent.addEventListener(key.slice(2).toLowerCase(), value);
             } else {
-                parent.setAttribute(key, String(value));
+                parent.setAttribute(key === 'className' ? 'class' : key, String(value));
             }
         }
     }
 
-    querySelector(selector: string): HTMLElement {
+    querySelector(selector: string): Element {
         return document.querySelector(selector);
     }
 
-    updateWidget(info: IWidgetUpdate<HTMLElement>): void {
+    updateWidget(info: IWidgetUpdate<Element>): void {
         const childNodes = info.node.childNodes;
         const element = childNodes.item(info.updateIndex) as any;
         const previous = element?.previousSibling;
+
+        if (!info.state) return;
 
         if (info.isStringable) {
             return (element.data = info.state);
@@ -90,7 +104,7 @@ export class WidgetHelper implements IWidget<HTMLElement> {
 
         const elements = Array.from(childNodes)
             .slice(info.updateIndex)
-            .slice(0, info.totalChilds) as HTMLElement[];
+            .slice(0, info.totalChilds) as Element[];
         const next = elements.at(-1)?.nextSibling;
 
         if (info.typeAction === StateAction.NEW) {

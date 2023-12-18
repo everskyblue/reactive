@@ -4,6 +4,6 @@
         "target": "ES2016",
         "isolatedModules": true,
         "moduleResolution": "node",
-        "lib": ["DOM", "DOM.Iterable", "ES2022"]
+        "lib": ["DOM", "DOM.Iterable", "ES2022", "ES2015.Core"]
     }
 }
