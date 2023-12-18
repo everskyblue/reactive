@@ -1,21 +1,11 @@
 {
+    "extends": "./core/tsconfig",
     "compilerOptions": {
-        "baseUrl": ".",
-        "target": "ES2016",
-        "isolatedModules": true,
-        "moduleResolution": "node",
-        "jsx": "react",
-        "jsxFactory": "Reactive.createElement",
-        "jsxFragmentFactory": "Reactive.Fragment",
-        "lib": ["DOM", "DOM.Iterable", "ESNext"],
-        "typeRoots": ["example/.src/test/views/types", "./types", "string-tocapitalize"],
-        "paths": {
-            "jsx": ["./core/src", "./core/src/reactive.ts"],
-            "jsx/*": ["core/src/*", "./core/src"]
-        },
+        "module": "commonjs",
+        "outDir": "dist/commonjs",
         "declaration": true,
         "declarationDir": "./types"
     },
     "exclude": ["node_modules"],
-    "include": ["example/**/*", "example/.src/test/**/*", "example/*", "core/**/*", "vite.config.build.js"]
+    "include": ["core/**/*"]
 }

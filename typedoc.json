@@ -2,11 +2,6 @@
     "$schema": "https://typedoc.org/schema.json",
     "entryPoints": ["./core/index.ts", "./core/src/contracts.ts"],
     "darkHighlightTheme": "material-theme-darker",
-    "exclude": [
-        "example/**/*",
-        "core/src/jsx-runtime/**/*",
-        "node_modules",
-        "idocs/**/*"
-    ],
+    "exclude": ["core/src/jsx-runtime/**/*", "node_modules"],
     "out": "docs"
 }

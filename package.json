@@ -1,26 +1,32 @@
 {
     "name": "reactive",
-    "version": "1.0.0-beta.1",
+    "version": "1.0.0-beta.2",
     "description": "inspired by react but a simpler implementation.",
-    "main": "dist/reactive.umd.js",
+    "main": "dist/commonjs/index.js",
     "module": "dist/reactive.mjs",
+    "browser": "dist/reactive.iife.js",
     "directories": {
         "docs": "docs",
-        "dist": "dist"
+        "dist": "dist",
+        "types": "types"
     },
+    "files": [
+        "dist/**/*",
+        "types/**/*",
+        "docs/**/*"
+    ],
     "devDependencies": {
         "vite": "^3.0.2"
     },
     "scripts": {
-        "dev": "vite -c vite.config.init.js --host",
-        "build": "vite -c vite.config.init.js build",
-        "preview": "vite preview",
-        "build-core": "vite -c vite.config.build.js build",
+        "build": "vite build --watch",
+        "build:ts-core": "tsc -p .",
+        "build-w:ts-core": "tsc -p . -w",
         "generate-docs": "typedoc --tsconfig core/tsconfig.json"
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/everskyblue/reactive.git"
+        "url": "git+https://github.com/nksociety/reactive.git"
     },
     "keywords": [
         "reactive",
@@ -34,7 +40,8 @@
     "author": "hicode",
     "license": "BSD 3-CLAUSE",
     "bugs": {
-        "url": "https://github.com/everskyblue/reactive/issues"
+        "url": "https://github.com/nksociety/reactive/issues"
     },
-    "homepage": "https:///everskyblue.github.io/reactive"
+    "homepage": "https:///nksociety.github.io/reactive",
+    "typings": "./types/index.d.ts"
 }

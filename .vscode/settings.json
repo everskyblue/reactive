@@ -1,5 +1,6 @@
 {
     "explorer.autoReveal": false,
     "editor.linkedEditing": true,
-    "scm.autoReveal": false
+    "scm.autoReveal": false,
+    "editor.minimap.enabled": true
 }

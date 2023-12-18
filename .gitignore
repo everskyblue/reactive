@@ -1,5 +1,4 @@
 node_modules
-api
-example
 idocs
 core/src/jsx-runtime
+types
