@@ -1,59 +1,143 @@
-export * from "./src/jsx-runtime/index.ts";
-var h = /* @__PURE__ */ ((e) => (e[e.CREATE = 0] = "CREATE", e[e.NEW = 1] = "NEW", e[e.UPDATE = 2] = "UPDATE", e[e.PREPEND = 3] = "PREPEND", e))(h || {});
-class l {
-  constructor(t, r = 0) {
-    this.TYPE_ACTION = r, this.store = [], this.data = t;
+var m = /* @__PURE__ */ ((e) => (e[e.CREATE = 0] = "CREATE", e[e.NEW = 1] = "NEW", e[e.UPDATE = 2] = "UPDATE", e[e.PREPEND = 3] = "PREPEND", e))(m || {});
+class b {
+  /**
+   *
+   * @param superCtx context superiority
+   * @param data create data
+   * @param TYPE_ACTION default action create
+   */
+  constructor(t, r, n = 0) {
+    this.superCtx = t, this.TYPE_ACTION = n, this.store = [], this.data = r;
   }
+  /**
+   * add new data and store
+   */
   set data(t) {
     const r = this.data;
-    this.TYPE_ACTION === 1 || this.TYPE_ACTION === 0 ? this._current = t : this.TYPE_ACTION === 2 ? this._current = t : this.TYPE_ACTION === 3 && (this.rendering = t), this.TYPE_ACTION !== 3 && (this.TYPE_ACTION === 2 ? this.store.push([...r, ...this._current]) : this.store.push(this._current));
+    if (this.TYPE_ACTION === 1 || this.TYPE_ACTION === 0 ? this._current = t : this.TYPE_ACTION === 2 ? this._current = t : this.TYPE_ACTION === 3 && (this.rendering = t), this.TYPE_ACTION !== 3) {
+      if (this.store.includes(t))
+        return;
+      this.TYPE_ACTION === 2 ? this.store.push(
+        this._current = [...r, ...this._current]
+      ) : this.store.push(this._current);
+    }
   }
+  /**
+   * current data
+   */
   get data() {
     return this._current;
   }
+  /**
+   * obtener datos anterior. sirve para controlar la diferencia del dato actual y nuevo
+   *
+   * get previous data It is used to control the difference between current and new data.
+   */
   get previousData() {
-    return this.store.at(this.store.indexOf(this.data) - 1);
+    return this.store.at(-1);
   }
   toString() {
     var t, r;
     return (r = (t = this.data) == null ? void 0 : t.toString()) != null ? r : "";
   }
 }
-class c {
-  constructor(t) {
-    this.store = /* @__PURE__ */ new Map(), this.currentStoreState = new l(t);
+function W(e, t, r) {
+  t.TYPE_ACTION = 1, t.data = e;
+}
+class d {
+  /* public set data(v: any) {
+      this.store.forEach((storeState, ctx) => {
+          storeState.data = v;
+      });
+      //this.currentStoreState.data = v;
+  } */
+  constructor(t, r) {
+    this.superCtx = r, this.store = /* @__PURE__ */ new Map(), this.currentStoreState = new b(r, t);
   }
   get parentNode() {
     return this.currentParentNode;
   }
+  /**
+   * actualiza el nodo en el que está el estado
+   *
+   * update the node the status is on
+   */
   set parentNode(t) {
-    this.currentParentNode = t, typeof this.currentStoreState.parentNode != "undefined" && this.currentStoreState.parentNode !== t && (this.currentStoreState = new l(
+    this.currentParentNode = t, typeof this.currentStoreState.parentNode != "undefined" && this.currentStoreState.parentNode !== t && (this.currentStoreState = new b(
+      this.superCtx,
       this.currentStoreState.data
     )), this.currentStoreState.parentNode = t, this.store.set(t, this.currentStoreState);
   }
   get data() {
     return this.currentStoreState.data;
   }
-  set data(t) {
-    this.currentStoreState.data = t;
-  }
+  /**
+   *
+   * @param proxy store proxy
+   */
   addProxySelf(t) {
-    this.proxySelf = t;
+    return this.proxySelf = t, this;
   }
+  /**
+   * nuevo estado
+   *
+   * new state
+   */
   set(t) {
-    this.currentStoreState.TYPE_ACTION = 1, this.currentStoreState.data = t, this.invokeNode();
+    W(t, this.currentStoreState);
   }
+  /**
+   * empuja nuevos datos al arreglo
+   *
+   * push new data to array
+   */
   append(t) {
-    this.currentStoreState.TYPE_ACTION = 2, this.currentStoreState.data = t, this.invokeNode();
+    W(
+      t,
+      this.proxySelf ? this.proxySelf.currentStoreState : this.currentStoreState
+    );
   }
-  invokeNode() {
-    this.store.forEach((t, r) => {
-      r.render(!0, t);
-    });
-  }
+  /**
+   * si hay nuevos datos invoca la funcion envolvente que retorna los nuevos valores
+   *
+   * if there is new data, call the enclosing function that returns the new values
+   */
+  /*invokeNode() {
+      if (this.store.size > 1) {
+          throw new Error("error");
+      }
+      for (const [ctx, storeState] of this.store.entries()) {
+          console.log("RENDER STATE", ctx, storeState);
+          ctx.render(true, storeState);
+      }
+  }*/
+  /**
+   * si el tipo de dato que a añadido en invoca una funcion retornando nuevos valores,
+   * esta funcion añade esos nuevos datos.
+   * sirve mas para un arreglo de elementos que devuelve una vista
+   *
+   * If the data type you added in invokes a function returning new values,
+   * this function adds that new data.
+   * it works better for an array of elements that returns a view
+   *
+   * @example
+   * ```javascript
+   *  state.map(value => (<p>{value}</p>));
+   * ```
+   */
   $setReturnData(t) {
-    this.currentStoreState.TYPE_ACTION = 3, this.currentStoreState.data = t;
+    return this.currentStoreState.TYPE_ACTION = 3, this.currentStoreState.data = t, this;
   }
+  $map(t) {
+    if (Array.isArray(this.data))
+      return this.currentStoreState.TYPE_ACTION = 3, this.currentStoreState.data = this.data.map(t);
+    throw new Error("data is not array");
+  }
+  /**
+   * is more for true and false values (value === data)
+   *
+   * @returns
+   */
   is(t) {
     return this.currentStoreState.data === t;
   }
@@ -68,7 +152,7 @@ class c {
       yield t;
   }
 }
-class S extends Text {
+class K extends Text {
   constructor(t) {
     super(t);
   }
@@ -79,193 +163,410 @@ class S extends Text {
     this.data = t;
   }
 }
-const b = {
-  setText: function(e, t) {
-    e.textContent = t;
-  },
-  createText: function(e) {
-    return new S(e);
-  },
-  createWidget: function(e) {
-    return document.createElement(e);
-  },
-  appendWidget: function(e, t) {
-    e.append(
-      ...Array.isArray(t) ? t : [t]
-    );
-  },
-  setProperties: function(e, t) {
-    for (const r in t) {
-      const n = t[r];
-      r.startsWith("on") ? e.addEventListener(r.slice(2).toLowerCase(), n) : e.setAttribute(r, String(n));
+class nt {
+  constructor() {
+    this.resetWidgets = (t) => {
+      for (const r of t)
+        r.innerHTML = "";
+    };
+  }
+  replaceChild(t, r, n) {
+    if (r.length === n.length)
+      n.forEach((i, s) => {
+        i.replaceWith(r[s]);
+      });
+    else if (n.length === 1)
+      n.at(0).replaceWith(...r);
+    else {
+      let i = n.at(-1).nextSibling;
+      n.forEach((s) => s.remove()), r.forEach((s) => {
+        t.insertBefore(s, i);
+      });
     }
-  },
-  querySelector(e) {
-    return document.querySelector(e);
-  },
-  updateWidget: function(e) {
-    var t;
-    const r = e.node.childNodes, n = r.item(e.updateIndex), i = n == null ? void 0 : n.previousSibling;
-    if (e.isStringable)
-      return n.data = e.state;
-    const s = Array.from(r).slice(e.updateIndex).slice(0, e.totalChilds), a = (t = s.at(-1)) == null ? void 0 : t.nextSibling;
-    if (e.typeAction === h.NEW) {
-      for (let o = 0; o < s.length; o++)
-        s[o].remove();
-      if (r.length === 0 || !n && !i && !a)
-        return e.node.append(...e.state);
-      if (n.parentNode)
-        return n.before(...e.state);
-      if (a && !n.parentNode)
-        return a.before(...e.state);
-      i.after(...e.state);
+  }
+  setText(t, r) {
+    t.textContent = r;
+  }
+  createText(t) {
+    return new K(t);
+  }
+  createWidget(t, r) {
+    return r ? document.createElementNS("http://www.w3.org/2000/svg", t) : document.createElement(t);
+  }
+  appendWidget(t, r) {
+    t.append(
+      ...Array.isArray(r) ? r : [r]
+    );
+  }
+  setProperties(t, r) {
+    for (const n in r) {
+      const i = r[n];
+      n.startsWith("on") ? t.addEventListener(n.slice(2).toLowerCase(), i) : t.setAttribute(n === "className" ? "class" : n, String(i));
+    }
+  }
+  querySelector(t) {
+    return document.querySelector(t);
+  }
+  updateWidget(t) {
+    var r;
+    const n = t.node.childNodes, i = n.item(t.updateIndex), s = i == null ? void 0 : i.previousSibling;
+    if (!t.state)
+      return;
+    if (t.isStringable)
+      return i.data = t.state;
+    const a = Array.from(n).slice(t.updateIndex).slice(0, t.totalChilds), c = (r = a.at(-1)) == null ? void 0 : r.nextSibling;
+    if (t.typeAction === m.NEW) {
+      for (let p = 0; p < a.length; p++)
+        a[p].remove();
+      if (n.length === 0 || !i && !s && !c)
+        return t.node.append(...t.state);
+      if (i.parentNode)
+        return i.before(...t.state);
+      if (c && !i.parentNode)
+        return c.before(...t.state);
+      s.after(...t.state);
     } else
-      e.typeAction === h.UPDATE && e.node.append(...e.state);
+      t.typeAction === m.UPDATE && t.node.append(...t.state);
+  }
+}
+const _ = /* @__PURE__ */ new Map(), o = {
+  createStore(e) {
+    _.has(e) || (_.set(e, /* @__PURE__ */ new Map()), Object.defineProperty(o, e, {
+      get() {
+        return _.get(e);
+      }
+    }));
   }
 };
-function y(e, t) {
+o.createStore("tickets");
+function k(e) {
+  const t = e.queue.at(e.ticket);
+  return e.ticket += 1, e.queue.length === e.ticket && (e.ticket = 0), t;
+}
+function D(e) {
+  return o.tickets.has(e) || o.tickets.set(e, {
+    reInvoke: !1,
+    ticket: 0,
+    queue: []
+  }), o.tickets.get(e);
+}
+o.createStore("callbacks");
+function Q(e, t) {
+  const r = D(t);
+  return r.reInvoke ? k(r) : (r.queue.push(e), e);
+}
+o.createStore("memo");
+function Y(e, t) {
+  const r = Q(e, t);
+  return o.memo.has(r) || o.memo.set(r, !1), (...n) => (o.memo.get(r) === !1 && o.memo.set(r, r(...n)), o.memo.get(r));
+}
+o.createStore("states");
+function q(e) {
+  const t = D(e);
+  return t.reInvoke ? k(t) : t;
+}
+function X(e, t) {
   return typeof e[t] == "function" ? e[t].bind(e) : e[t];
 }
-function v(e) {
-  const t = new Proxy(new c(e), {
-    get(r, n) {
-      if (n in r)
-        return y(r, n);
-      if (n in r.data)
-        return !Array.isArray(r.data) && r.data instanceof Object && !r.parentNode ? r.data[n] : typeof r.data[n] == "function" ? (...i) => (r.$setReturnData(
-          r.data[n].apply(r.data, i)
-        ), t) : t;
-      throw new Error("error proxy " + n);
+function I(e, t) {
+  const r = t ? q(t) : void 0;
+  if (r instanceof d)
+    return r;
+  const n = new Proxy(new d(e, t), {
+    get(i, s) {
+      if (s === "flatten")
+        return r;
+      if (s in i)
+        return X(i, s);
+      if (typeof i.data[s] != "undefined")
+        return !Array.isArray(i.data) && i.data instanceof Object ? i.data[s] : typeof i.data[s] == "function" ? (...a) => {
+          if (typeof i.data[s].apply(i.data, a) != "undefined")
+            return i.$setReturnData(
+              i.data[s].apply(i.data, a)
+            );
+        } : n;
+      throw new Error("error proxy " + s);
     },
-    set(r, n, i) {
-      if (n in r)
-        r[n] = i;
-      else if (n in r.data)
-        r.data[n] = i;
+    set(i, s, a) {
+      if (s in i)
+        i[s] = a;
+      else if (s in i.data)
+        i.data[s] = a;
       else
         return !1;
       return !0;
     }
   });
-  return t.addProxySelf(t), t;
+  return typeof r == "object" && r.queue.push(n), n;
 }
-function E({ state: e, callback: t, option: r }, n) {
-  return t.call(this, { state: e, option: r }, n);
+function it(e, t) {
+  const { state: r, callback: n, option: i } = e != null ? e : {};
+  return n ? n.call(this, { state: r, option: i, children: t }) : t;
 }
-let u;
-function N(e) {
+let S;
+const R = (e) => e.find((t) => Z(t.properties));
+function Z({ path: e }) {
+  const t = location.hash.length && location.hash.startsWith("#") ? location.hash.slice(1) : "/", n = new globalThis.URLPattern(e, location.origin).exec(t, location.origin);
+  return S = n ? { path: n.input, params: n.groups } : null, S !== null;
+}
+function st({
+  children: e,
+  notFount: t
+}) {
+  const r = I(!1, this), n = I(r.data ? t : R(e), this);
+  return Y(() => {
+    this.implementStates(n), window.addEventListener("hashchange", () => {
+      var i;
+      r.data === !1 && r.set(!0), n.set((i = R(e)) != null ? i : t);
+    });
+  }, this)(), n.data.parentNode || (n.data.parentNode = this), n.data;
+}
+function at(e) {
+  return e.render.parentNode = this, e.render;
+}
+function ot() {
+  return S.params;
+}
+function ct() {
+  return S.path;
+}
+function H(e) {
+  let t = e.flatten;
+  e.currentStoreState.superCtx && !t && (t = q(
+    e.currentStoreState.superCtx
+  )), t && !(t instanceof d) && (t.reInvoke = !0);
+}
+function U(e, t = Function) {
+  for (const r of e) {
+    const n = r.set.bind(r), i = r.append.bind(r);
+    r.set = (s) => {
+      H(r), n(s), t(r);
+    }, r.append = (s) => {
+      H(r), i(s), t(r);
+    };
+  }
+}
+function dt(...e) {
+  var t;
+  for (const r of e) {
+    const [n, i] = Array.isArray(r) ? r : [r], s = (t = n.currentStoreState.superCtx) != null ? t : i;
+    if (typeof s == "undefined")
+      throw new Error("el estado no tiene el contexto del componente");
+    Y(() => {
+      i && (n.currentStoreState.superCtx = s), s.implementStates(n);
+    }, s)();
+  }
+}
+function g(e) {
   return Array.isArray(e) ? e : [e];
 }
-function _(e) {
-  u = e;
+function l(e) {
+  return typeof e.type == "string" ? g(e.node) : e.childs.map(j).flat();
 }
-class m {
-  static Fragment(t) {
-    return t;
+function j(e) {
+  return e.node ? e.node : tt(e).flat();
+}
+function tt(e) {
+  const t = [];
+  for (const r of e.childs) {
+    let n = r;
+    r instanceof J && (n = j(r)), t.push(n);
   }
-  static createElement(t, r, ...n) {
-    const i = {
-      type: t,
-      properties: r,
-      getParentNode: A,
-      render: g
-    };
-    if (s(n), typeof t == "string")
-      i.node = u.createWidget(t), i.childs = n, u.setProperties(i.node, r);
-    else if (typeof t == "function") {
-      const a = t.name === "Fragment" ? t(n) : t.call(i, r, n);
-      i.childs = a, s(Array.isArray(i.childs) ? i.childs : [i.childs]);
-    }
-    function s(a) {
-      a.forEach((o) => {
-        typeof o == "object" && (o.parentNode || (o.parentNode = i));
-      });
-    }
-    return i;
-  }
+  return t;
 }
-function A() {
-  return typeof this.node == "object" ? this : f(this);
-}
-function C(e, t) {
-  return t.node = u.querySelector(e), t.render(), console.log(t), t;
-}
-function T(e, t, r) {
-  var n;
-  const i = r.store.get(e);
-  Array.isArray(i.data) || Array.isArray(i.rendering) ? ((n = i.rendering) != null ? n : i.data).forEach(
-    (s) => {
-      var a;
-      u.appendWidget(t, (a = s == null ? void 0 : s.render()) != null ? a : s);
-    }
-  ) : u.appendWidget(t, r);
-}
-function g(e, t) {
-  var r;
-  if (e) {
-    const n = typeof this.type == "function" ? f(this) : this, i = N(n.childs), s = [];
-    i.forEach((a, o) => {
-      (this === a || a instanceof c && a.data === t.data) && s.push(o);
-    }), s.forEach((a) => {
-      const o = i.at(a);
-      P(o);
-      const d = {
-        isStringable: !1,
-        node: n.node,
-        typeAction: t.TYPE_ACTION,
-        updateIndex: a
-      };
-      o instanceof c ? (d.isStringable = !0, d.state = t.data, d.totalChilds = i.length) : typeof o.type == "function" && (o.type(o.properties), d.state = t.rendering.map(
-        (p) => p.render()
-      ), d.totalChilds = t.previousData.length, setTimeout(() => {
-        t.rendering = void 0;
-      }, 0)), u.updateWidget(d);
-    });
-    return;
-  }
-  return (Array.isArray(this.childs) ? this.childs : [this.childs]).forEach(
-    (n) => {
-      var i;
-      const s = n instanceof c;
-      if (typeof n == "object" && !s) {
-        const { node: a } = f(n);
-        typeof n.node == "object" && u.appendWidget(a, n.node), n.render();
-      } else {
-        const a = (i = this.node) != null ? i : f(this).node;
-        s ? T(this, a, n) : u.appendWidget(a, n);
-      }
-    }
-  ), (r = this.node) != null ? r : this;
-}
-function f(e) {
-  let t = e.parentNode;
-  if (typeof t == "undefined")
-    return e;
-  for (; typeof t.node != "object"; )
+function L(e) {
+  let t = e;
+  for (; t && typeof t.node != "object"; )
     t = t.parentNode;
   return t;
 }
-function P(e) {
-  if (e instanceof c) {
-    if (!x(e))
-      throw new Error(
-        "the execution of a state without an executing function is only allowed if they are strings, numbers or boolean values"
-      );
-  } else if (typeof e.type == "function" && e.type.name !== E.name)
-    throw new Error("is not a [function Execute] ");
+function y(e = !1) {
+  const t = {};
+  e && (t.children = this.originalChilds);
+  for (const r in this.properties)
+    e && r === "shareContext" ? t.sharedContext = this.properties[r] : t[r === "className" ? "class" : r] = this.properties[r];
+  return t;
 }
-function x(e) {
-  return Array.isArray(e.data) ? e.data.some((t) => typeof t == "object") === !1 : ["string", "number", "boolean"].includes(typeof e.data);
+var et = (e, t, r) => {
+  if (!t.has(e))
+    throw TypeError("Cannot " + r);
+}, h = (e, t, r) => {
+  if (t.has(e))
+    throw TypeError("Cannot add the same private member more than once");
+  t instanceof WeakSet ? t.add(e) : t.set(e, r);
+}, u = (e, t, r) => (et(e, t, "access private method"), r), E, M, T, F, A, $, C, V, w, B, x, z, v, G;
+const rt = ["string", "number", "boolean"], O = {
+  pos: 0,
+  current: 0
+}, f = class N {
+  constructor(t, r, n, i) {
+    this.type = t, this.properties = r, this.widgedHelper = n, this.originalChilds = i, h(this, E), h(this, T), h(this, A), h(this, C), h(this, w), h(this, x), h(this, v), this.isReInvoke = !1, this.node = void 0, this.parentNode = void 0, this.childs = void 0, this._id = O.pos, this._ns = !1, this._fnparent = void 0, typeof this.type == "string" && this.type === "svg" && (this._ns = !0);
+    for (let s of i)
+      this._ns && s instanceof N && (s._ns = !0), typeof this.type == "function" && s instanceof N && (s._fnparent = this);
+    O.pos++;
+  }
+  createNodeAndChilds() {
+    typeof this.type == "string" && (this.node = this.widgedHelper.createWidget(this.type, this._ns), this.childs = g(this.originalChilds));
+  }
+  render() {
+    if (this.node && (this.widgedHelper.setProperties(
+      this.node,
+      y.call(this)
+    ), this.isReInvoke && this.widgedHelper.resetWidgets && this.widgedHelper.resetWidgets(l(this))), typeof this.type == "function" && !this.childs) {
+      const t = y.call(this, !0), r = this.type.name === "Fragment" ? this.type(t) : this.type.call(this, t);
+      this.childs = g(r);
+    }
+    return u(this, w, B).call(this), this;
+  }
+  /**
+   * el nodo es un objeto que representa la vista
+   * si no hay significa que es una funcion
+   * buscara el objecto de que representa la vista
+   */
+  getNodeWidget() {
+    return typeof this.node == "object" ? this : L(this);
+  }
+  implementStates(...t) {
+    U(t, (r) => {
+      u(this, v, G).call(this, r.currentStoreState);
+    });
+  }
+};
+E = /* @__PURE__ */ new WeakSet();
+M = function(e) {
+  if (e instanceof d && !u(this, T, F).call(this, e))
+    throw new Error(
+      "the execution of a state without an executing function is only allowed if they are strings, numbers or boolean values"
+    );
+};
+T = /* @__PURE__ */ new WeakSet();
+F = function(e) {
+  return Array.isArray(e.data) ? e.data.some((t) => typeof t == "object") === !1 : rt.includes(typeof e.data);
+};
+A = /* @__PURE__ */ new WeakSet();
+$ = function(e) {
+  var t, r;
+  const n = typeof this.type == "function" ? L(this) : this, i = n.childs;
+  for (let s = 0, a; a = i[s]; s++) {
+    if (this !== a || !(a instanceof d && a.data === e.data))
+      continue;
+    u(this, E, M).call(this, a);
+    const c = {
+      isStringable: !1,
+      node: n.node,
+      typeAction: e.TYPE_ACTION,
+      updateIndex: s
+    };
+    a instanceof d && Object.assign(c, {
+      isStringable: !0,
+      state: e.data,
+      totalChilds: i.length
+    }), a instanceof f && typeof a.type == "function" && (a.type.call(
+      this,
+      y.call(this, !0)
+    ), e.parentNode && (c.state = (r = (t = e.rendering) == null ? void 0 : t.map((p) => l(p.render())).flat()) != null ? r : l(e.data)), c.totalChilds = e.previousData.length), this.widgedHelper.updateWidget(c);
+  }
+};
+C = /* @__PURE__ */ new WeakSet();
+V = function(e) {
+  e.isReInvoke = !0;
+  const t = e.type.call(e, y.call(e, !0)), r = l(e);
+  let n;
+  if (t instanceof f)
+    t.isReInvoke = !0, t.render(), n = l(t), t.parentNode = e;
+  else if (Array.isArray(t))
+    n = t.map(
+      (i) => l(i.render()).at(0)
+    );
+  else
+    throw new Error("could not resolve nodes");
+  this.widgedHelper.replaceChild(
+    this.getNodeWidget().node,
+    n,
+    r
+  ), e.childs = g(t);
+};
+w = /* @__PURE__ */ new WeakSet();
+B = function() {
+  const e = this.getNodeWidget();
+  for (let t of this.childs)
+    (t instanceof f || t instanceof d) && (t.parentNode = this), t instanceof f ? (typeof this.type == "function" ? t._fnparent = this.type.name !== "Fragment" ? this : this._fnparent : typeof this.type == "string" && this._fnparent && (t._fnparent = this._fnparent), typeof t.type == "string" && this._ns && (t._ns = !0, t.createNodeAndChilds()), this.isReInvoke && (t.createNodeAndChilds(), t.isReInvoke = !0), e && typeof t.node == "object" && this.widgedHelper.appendWidget(e.node, t.node), t.render()) : t instanceof d ? (U([t]), e && u(this, x, z).call(this, this, e.node, t)) : e && this.widgedHelper.appendWidget(
+      e.node,
+      this.widgedHelper.createText(t)
+    );
+};
+x = /* @__PURE__ */ new WeakSet();
+z = function(e, t, r) {
+  var n;
+  const i = r.currentStoreState;
+  Array.isArray(i.data) || Array.isArray(i.rendering) ? ((n = i.rendering) != null ? n : i.data).forEach(
+    (s) => {
+      this.widgedHelper.appendWidget(
+        t,
+        s instanceof f ? s.render().node : s
+      );
+    }
+  ) : this.widgedHelper.appendWidget(t, r);
+};
+v = /* @__PURE__ */ new WeakSet();
+G = function(e) {
+  return e.superCtx ? u(this, C, V).call(this, e.superCtx) : u(this, A, $).call(this, e);
+};
+let J = f, P;
+function ht(e) {
+  P = e;
+}
+class ut {
+  /**
+   *
+   * @param elements tree childs
+   * @returns
+   */
+  static Fragment({
+    children: t
+  }) {
+    return t;
+  }
+  /**
+   * crear la interfaz del nodo
+   *
+   * create node interface
+   *
+   * @param type type element jsx
+   * @param properties properties received jsx
+   * @param childs tree childs
+   * @returns
+   */
+  static createElement(t, r, ...n) {
+    const i = Object.seal(
+      new J(t, r || {}, P, n)
+    );
+    return i.createNodeAndChilds(), i;
+  }
+}
+function lt(e, t) {
+  return t.node = P.querySelector(e), t.render(), console.log(t), t;
 }
 export {
-  E as Execute,
-  m as Reactive,
-  S as ReactiveText,
-  c as State,
-  h as StateAction,
-  l as StoreState,
-  _ as addWidget,
-  b as createWidget,
-  C as render,
-  v as useState
+  it as Execute,
+  o as HookStore,
+  ut as Reactive,
+  K as ReactiveText,
+  at as Route,
+  st as Routes,
+  d as State,
+  m as StateAction,
+  b as StoreState,
+  nt as WidgetHelper,
+  ht as addWidgetHelper,
+  D as createTicket,
+  Y as exec,
+  q as flattenState,
+  dt as implementStates,
+  k as nextTicket,
+  lt as render,
+  Q as useCallback,
+  ot as useParams,
+  ct as usePath,
+  I as useState
 };

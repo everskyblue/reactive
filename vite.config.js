@@ -1,10 +1,12 @@
-import { readdirSync } from 'fs';
-import { join, resolve } from 'path'
+import { readdirSync } from "fs";
+import { join, resolve } from "path";
 
 function getExcludeFile() {
     const pluggablesDirectoryPath = resolve(__dirname, "core/src/jsx-runtime");
     const filesInPluggablesDirectory = readdirSync(pluggablesDirectoryPath);
-    return filesInPluggablesDirectory.map(file => join(pluggablesDirectoryPath, file));
+    return filesInPluggablesDirectory.map((file) =>
+        join(pluggablesDirectoryPath, file)
+    );
 }
 
 export default {
@@ -16,10 +18,10 @@ export default {
             entry: resolve(__dirname, "core/index.ts"),
             name: "reactive",
             fileName: "reactive",
-            formats: ["es", "umd"],
+            formats: ["es", "iife"],
         },
         rollupOptions: {
-            external: getExcludeFile(),
+            //external: getExcludeFile(),
         },
     },
     esbuild: {
