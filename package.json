@@ -2,7 +2,7 @@
     "name": "reactive",
     "version": "1.0.0-beta.2",
     "description": "inspired by react but a simpler implementation.",
-    "main": "dist/commonjs/index.js",
+    "main": "dist/index.js",
     "module": "dist/reactive.mjs",
     "browser": "dist/reactive.iife.js",
     "directories": {
@@ -16,12 +16,12 @@
         "docs/**/*"
     ],
     "devDependencies": {
-        "vite": "^3.0.2"
+        "vite": "^5.0.10"
     },
     "scripts": {
         "build": "vite build --watch",
-        "build:ts-core": "tsc -p .",
-        "build-w:ts-core": "tsc -p . -w",
+        "build:core": "tsc -p .",
+        "build:w-core": "tsc -p . -w",
         "generate-docs": "typedoc --tsconfig core/tsconfig.json"
     },
     "repository": {

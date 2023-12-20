@@ -101,7 +101,7 @@ export class StoreState<TypeWidget> {
     }
 }
 function setData(newValue: any, storeState: StoreState<any>, action: StateAction) {
-    storeState.TYPE_ACTION = StateAction.NEW;
+    storeState.TYPE_ACTION = action;
     storeState.data = newValue;
 }
 /**

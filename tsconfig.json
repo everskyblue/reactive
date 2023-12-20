@@ -2,7 +2,7 @@
     "extends": "./core/tsconfig",
     "compilerOptions": {
         "module": "commonjs",
-        "outDir": "dist/commonjs",
+        "outDir": "./dist",
         "declaration": true,
         "declarationDir": "./types"
     },

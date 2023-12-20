@@ -60,6 +60,8 @@ export class TreeWidget<TypeWidget = any> {
 
     private _fnparent: TreeWidget = undefined;
 
+    private _listenerOnCreate: (element: TypeWidget | undefined) => any = () => void 0;
+
     constructor(
         public type: TreeWidgetOfType<TypeWidget>,
         public properties: Record<string, any>,
@@ -68,6 +70,11 @@ export class TreeWidget<TypeWidget = any> {
     ) {
         if (typeof this.type === 'string' && this.type === 'svg') {
             this._ns = true;
+        }
+
+        if (properties && properties.onCreate) {
+            this._listenerOnCreate = properties.onCreate;
+            delete this.properties.onCreate;
         }
 
         for (let child of originalChilds) {
@@ -234,7 +241,7 @@ export class TreeWidget<TypeWidget = any> {
                 child.render();
             } else {
                 if (child instanceof State) {
-                    rewriteMethodState([child]);
+                    this.implementStates(child);
 
                     if (ctxWidget) {
                         this.#renderDataState(this, ctxWidget.node, child);
@@ -299,6 +306,8 @@ export class TreeWidget<TypeWidget = any> {
         }
 
         this.#renderChild();
+
+        this._listenerOnCreate(this.node);
 
         return this;
     }

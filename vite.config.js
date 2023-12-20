@@ -18,7 +18,7 @@ export default {
             entry: resolve(__dirname, "core/index.ts"),
             name: "reactive",
             fileName: "reactive",
-            formats: ["es", "iife"],
+            formats: ["es", "iife", "cjs"],
         },
         rollupOptions: {
             //external: getExcludeFile(),
@@ -26,5 +26,5 @@ export default {
     },
     esbuild: {
         target: "es2016",
-    },
+    }
 };
