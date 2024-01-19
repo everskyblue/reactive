@@ -31,7 +31,7 @@ export class Listeners implements Pick<string, any> {
 
     private stacks: fnEvent[] = [];
 
-    constructor(public value: any) {}
+    constructor(public value: string) {}
 
     getQueue() {
         return this.stacks;

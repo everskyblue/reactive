@@ -1,4 +1,4 @@
-import { TreeWidget, TypeChildNode } from "../TreeWidget";
+import { TreeWidget, TypeChildNode, _onUpdate } from "../TreeWidget";
 import { exec, flattenState } from "../hooks";
 import { State } from "../State";
 
@@ -21,20 +21,12 @@ export function setReInvocationState(state: any) {
  * reescribe el metodo set y append del estado
  * sirve para actualizar el elemento en el que se a añadido
  */
-export function rewriteMethodState(states: State[], callback: (state: State) => void = () => {}) {
-    for (const state of states) {console.log(state);
+export function setListenerStates(states: State[], callback: (state: State) => void = () => {}) {
+    for (const state of states) {
         const set = state.set.bind(state);
-        const append = state.append.bind(state);
-
         state.set = (newValue: any) => {
             setReInvocationState(state);
             set(newValue);
-            callback(state);
-        };
-
-        state.append = (values: any[]) => {
-            setReInvocationState(state);
-            append(values);
             callback(state);
         };
     }
@@ -44,23 +36,14 @@ export function rewriteMethodState(states: State[], callback: (state: State) => 
  * añade un estado global al contexto del componente para su actualizacion
  */
 export function implementStates(
-    ...states: [states: State, ctx: TreeWidget<any>][] | State[]
+    ctx: TreeWidget<any>,
+    states: State[]
 ) {
-    for (const values of states) {
-        const [state, ctx] = Array.isArray(values) ? values : [values];
-        const tree = state.currentStoreState.superCtx ?? ctx;
-
-        if (typeof tree === 'undefined') {
-            throw new Error("el estado no tiene el contexto del componente");
-        }
-
-        exec(() => {
-            if (ctx) {
-                state.currentStoreState.superCtx = tree;
-            }
-            tree.implementStates(state);
-        }, tree)();
-    }
+    exec(() => {
+        setListenerStates(states, state => {
+            _onUpdate.call(ctx, state.currentStoreState);
+        })
+    }, ctx)();
 }
 
 /**

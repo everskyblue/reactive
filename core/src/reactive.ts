@@ -1,19 +1,19 @@
-import type { IWidget } from "./contracts";
 import {
     TreeWidget,
     TreeWidgetOfType,
     TypeChildNode,
     ReactivePropsWithChild,
+    NativeRender,
 } from "./TreeWidget";
 
-let widgedHelper: IWidget;
+let widgedHelper: NativeRender;
 
 /**
  * añade un objeto que representa el manejo del nodo: crear, añadir, actualizar, eliminar y seleccionar
  *
  * @param widget adds an object that represents the handling of the node: create, add, update, delete and select
  */
-export function addWidgetHelper(helper: IWidget) {
+export function addWidgetHelper(helper: any) {
     widgedHelper = helper;
 }
 

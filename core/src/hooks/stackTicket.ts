@@ -26,5 +26,12 @@ export function createTicket(ctx: TreeWidget<any>): IStackTicket {
             queue: [],
         });
     }
-    return HookStore.tickets.get(ctx);
+    
+    const ticket = HookStore.tickets.get(ctx);
+    
+    if (ctx.isReInvoke) {
+        ticket.reInvoke = true;
+    }
+    
+    return ticket;
 }

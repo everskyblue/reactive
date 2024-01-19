@@ -1,5 +1,5 @@
 import { TreeWidget } from "../TreeWidget";
-import { State } from "../State";
+import { State, StateRender } from "../State";
 import { flattenState } from "./flattenState";
 
 
@@ -77,8 +77,9 @@ export function useState<TypeData = any, TypeWidget = any>(
                     ? (...args: any[]) => {
                         const newValue = target.data[key].apply(target.data, args);
                         if (typeof newValue !== 'undefined') {
-                            return target.$setReturnData(
-                                target.data[key].apply(target.data, args)
+                            return new StateRender(
+                                target.data[key].apply(target.data, args),
+                                proxies
                             );
                         }
                     }

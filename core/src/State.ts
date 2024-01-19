@@ -24,6 +24,24 @@ export enum StateAction {
     PREPEND,
 }
 
+export class StateRender {
+    _parentNode: TreeWidget<any> = null;
+    readonly node: TreeWidget<any>[] = null;
+    
+    constructor(widgets: TreeWidget<any>[], readonly state: State) {
+        this.node = widgets.map(wg => wg.render());
+    }
+    
+    set parentNode(parent: TreeWidget<any>) {
+        this._parentNode = parent;
+        parent.implementStates(this.state);
+    }
+    
+    get parentNode() {
+        return this._parentNode;
+    }
+}
+
 /**
  * almacena cada actualizacion de estado
  *
@@ -53,30 +71,14 @@ export class StoreState<TypeWidget> {
      * add new data and store
      */
     public set data(v: any) {
-        const current = this.data;
-
-        if (
-            this.TYPE_ACTION === StateAction.NEW ||
-            this.TYPE_ACTION === StateAction.CREATE
-        ) {
-            this._current = v;
-        } else if (this.TYPE_ACTION === StateAction.UPDATE) {
-            this._current = v;
-        } else if (this.TYPE_ACTION === StateAction.PREPEND) {
+        if (this.TYPE_ACTION === StateAction.PREPEND) {
             this.rendering = v;
         }
 
         // not TreeWidget<any>[]
         if (this.TYPE_ACTION !== StateAction.PREPEND) {
             if (this.store.includes(v)) return;
-            // So you can get the above data correctly and you can update the widget
-            if (this.TYPE_ACTION === StateAction.UPDATE) {
-                this.store.push(
-                    (this._current = [...current, ...this._current])
-                );
-            } else {
-                this.store.push(this._current);
-            }
+            this.store.push(v);
         }
     }
 
@@ -84,7 +86,7 @@ export class StoreState<TypeWidget> {
      * current data
      */
     public get data(): any {
-        return this._current;
+        return this.store.at(-1);
     }
 
     /**
@@ -93,7 +95,7 @@ export class StoreState<TypeWidget> {
      * get previous data It is used to control the difference between current and new data.
      */
     public get previousData(): any {
-        return this.store.at(-1);
+        return this.store.at(-2);
     }
 
     toString() {
@@ -147,6 +149,14 @@ export class State<TypeWidget = any> implements Record<string, any> {
     public get parentNode(): TreeWidget<any> {
         return this.currentParentNode;
     }
+    
+    public get superCtx(): TreeWidget<any> {
+        return this.currentStoreState.superCtx;
+    }
+    
+    public get previousData(): TypeWidget {
+        return this.currentStoreState.previousData;
+    }
 
     /**
      * actualiza el nodo en el que está el estado
@@ -154,19 +164,22 @@ export class State<TypeWidget = any> implements Record<string, any> {
      * update the node the status is on
      */
     public set parentNode(parent: TreeWidget<any>) {
-        this.currentParentNode = parent;
+        /*this.currentParentNode = parent;
         if (
             typeof this.currentStoreState.parentNode !== "undefined" &&
             this.currentStoreState.parentNode !== parent
         ) {
+            const rendering = this.currentStoreState.rendering;
             this.currentStoreState = new StoreState<TypeWidget>(
                 this.superCtx,
                 this.currentStoreState.data
             );
+            this.currentStoreState.rendering = rendering;
+            
         }
 
         this.currentStoreState.parentNode = parent;
-        this.store.set(parent, this.currentStoreState);
+        this.store.set(parent, this.currentStoreState);*/
     }
 
     public get data(): any {
@@ -182,7 +195,7 @@ export class State<TypeWidget = any> implements Record<string, any> {
 
     constructor(
         data: any,
-        private superCtx: TreeWidget<TypeWidget>
+        superCtx: TreeWidget<TypeWidget>
     ) {
         this.currentStoreState = new StoreState<TypeWidget>(superCtx, data);
     }
@@ -206,23 +219,6 @@ export class State<TypeWidget = any> implements Record<string, any> {
     }
 
     /**
-     * empuja nuevos datos al arreglo
-     *
-     * push new data to array
-     */
-    append(values: any[]) {
-        //this.currentStoreState.TYPE_ACTION = StateAction.UPDATE;
-        //this.currentStoreState.data = values;
-        setData(
-            values,
-            this.proxySelf
-                ? this.proxySelf.currentStoreState
-                : this.currentStoreState,
-            StateAction.UPDATE
-        );
-    }
-
-    /**
      * si hay nuevos datos invoca la funcion envolvente que retorna los nuevos valores
      *
      * if there is new data, call the enclosing function that returns the new values
@@ -236,35 +232,6 @@ export class State<TypeWidget = any> implements Record<string, any> {
             ctx.render(true, storeState);
         }
     }*/
-
-    /**
-     * si el tipo de dato que a añadido en invoca una funcion retornando nuevos valores,
-     * esta funcion añade esos nuevos datos.
-     * sirve mas para un arreglo de elementos que devuelve una vista
-     *
-     * If the data type you added in invokes a function returning new values,
-     * this function adds that new data.
-     * it works better for an array of elements that returns a view
-     *
-     * @example
-     * ```javascript
-     *  state.map(value => (<p>{value}</p>));
-     * ```
-     */
-    $setReturnData(value: any) {
-        this.currentStoreState.TYPE_ACTION = StateAction.PREPEND;
-        this.currentStoreState.data = value;
-        return this;
-    }
-    
-    $map(callback: (data: any, index: number) => any) {
-        if (Array.isArray(this.data)) {
-            this.currentStoreState.TYPE_ACTION = StateAction.PREPEND;
-            return (this.currentStoreState.data = this.data.map(callback));
-        }
-        
-        throw new Error('data is not array');
-    }
 
     /**
      * is more for true and false values (value === data)
