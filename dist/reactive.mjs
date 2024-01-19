@@ -1,32 +1,78 @@
-var m = /* @__PURE__ */ ((e) => (e[e.CREATE = 0] = "CREATE", e[e.NEW = 1] = "NEW", e[e.UPDATE = 2] = "UPDATE", e[e.PREPEND = 3] = "PREPEND", e))(m || {});
-class b {
+const m = /* @__PURE__ */ new Map(), d = {
+  createStore(e) {
+    m.has(e) || (m.set(e, /* @__PURE__ */ new Map()), Object.defineProperty(d, e, {
+      get() {
+        return m.get(e);
+      }
+    }));
+  }
+};
+d.createStore("tickets");
+function I(e) {
+  const t = e.queue.at(e.ticket);
+  return e.ticket += 1, e.queue.length === e.ticket && (e.ticket = 0), t;
+}
+function b(e) {
+  d.tickets.has(e) || d.tickets.set(e, {
+    reInvoke: !1,
+    ticket: 0,
+    queue: []
+  });
+  const t = d.tickets.get(e);
+  return e.isReInvoke && (t.reInvoke = !0), t;
+}
+d.createStore("callbacks");
+function V(e, t) {
+  const n = b(t);
+  return n.reInvoke ? I(n) : (n.queue.push(e), e);
+}
+d.createStore("memo");
+function k(e, t) {
+  const n = V(e, t);
+  return d.memo.has(n) || d.memo.set(n, !1), (...r) => (d.memo.get(n) === !1 && d.memo.set(n, n(...r)), d.memo.get(n));
+}
+d.createStore("states");
+function A(e) {
+  const t = b(e);
+  return t.reInvoke ? I(t) : t;
+}
+var B = /* @__PURE__ */ ((e) => (e[e.CREATE = 0] = "CREATE", e[e.NEW = 1] = "NEW", e[e.UPDATE = 2] = "UPDATE", e[e.PREPEND = 3] = "PREPEND", e))(B || {});
+class u {
+  constructor(t, n) {
+    this.state = n, this._parentNode = null, this.node = null, this.node = t.map((r) => r.render());
+  }
+  set parentNode(t) {
+    this._parentNode = t, t.implementStates(this.state);
+  }
+  get parentNode() {
+    return this._parentNode;
+  }
+}
+class F {
   /**
    *
    * @param superCtx context superiority
    * @param data create data
    * @param TYPE_ACTION default action create
    */
-  constructor(t, r, n = 0) {
-    this.superCtx = t, this.TYPE_ACTION = n, this.store = [], this.data = r;
+  constructor(t, n, r = 0) {
+    this.superCtx = t, this.TYPE_ACTION = r, this.store = [], this.data = n;
   }
   /**
    * add new data and store
    */
   set data(t) {
-    const r = this.data;
-    if (this.TYPE_ACTION === 1 || this.TYPE_ACTION === 0 ? this._current = t : this.TYPE_ACTION === 2 ? this._current = t : this.TYPE_ACTION === 3 && (this.rendering = t), this.TYPE_ACTION !== 3) {
+    if (this.TYPE_ACTION === 3 && (this.rendering = t), this.TYPE_ACTION !== 3) {
       if (this.store.includes(t))
         return;
-      this.TYPE_ACTION === 2 ? this.store.push(
-        this._current = [...r, ...this._current]
-      ) : this.store.push(this._current);
+      this.store.push(t);
     }
   }
   /**
    * current data
    */
   get data() {
-    return this._current;
+    return this.store.at(-1);
   }
   /**
    * obtener datos anterior. sirve para controlar la diferencia del dato actual y nuevo
@@ -34,28 +80,34 @@ class b {
    * get previous data It is used to control the difference between current and new data.
    */
   get previousData() {
-    return this.store.at(-1);
+    return this.store.at(-2);
   }
   toString() {
-    var t, r;
-    return (r = (t = this.data) == null ? void 0 : t.toString()) != null ? r : "";
+    var t, n;
+    return (n = (t = this.data) == null ? void 0 : t.toString()) != null ? n : "";
   }
 }
-function W(e, t, r) {
-  t.TYPE_ACTION = r, t.data = e;
+function z(e, t, n) {
+  t.TYPE_ACTION = n, t.data = e;
 }
-class d {
+class c {
   /* public set data(v: any) {
       this.store.forEach((storeState, ctx) => {
           storeState.data = v;
       });
       //this.currentStoreState.data = v;
   } */
-  constructor(t, r) {
-    this.superCtx = r, this.store = /* @__PURE__ */ new Map(), this.currentStoreState = new b(r, t);
+  constructor(t, n) {
+    this.store = /* @__PURE__ */ new Map(), this.currentStoreState = new F(n, t);
   }
   get parentNode() {
     return this.currentParentNode;
+  }
+  get superCtx() {
+    return this.currentStoreState.superCtx;
+  }
+  get previousData() {
+    return this.currentStoreState.previousData;
   }
   /**
    * actualiza el nodo en el que está el estado
@@ -63,10 +115,6 @@ class d {
    * update the node the status is on
    */
   set parentNode(t) {
-    this.currentParentNode = t, typeof this.currentStoreState.parentNode != "undefined" && this.currentStoreState.parentNode !== t && (this.currentStoreState = new b(
-      this.superCtx,
-      this.currentStoreState.data
-    )), this.currentStoreState.parentNode = t, this.store.set(t, this.currentStoreState);
   }
   get data() {
     return this.currentStoreState.data;
@@ -84,24 +132,11 @@ class d {
    * new state
    */
   set(t) {
-    W(
+    z(
       t,
       this.currentStoreState,
       1
       /* NEW */
-    );
-  }
-  /**
-   * empuja nuevos datos al arreglo
-   *
-   * push new data to array
-   */
-  append(t) {
-    W(
-      t,
-      this.proxySelf ? this.proxySelf.currentStoreState : this.currentStoreState,
-      2
-      /* UPDATE */
     );
   }
   /**
@@ -118,28 +153,6 @@ class d {
           ctx.render(true, storeState);
       }
   }*/
-  /**
-   * si el tipo de dato que a añadido en invoca una funcion retornando nuevos valores,
-   * esta funcion añade esos nuevos datos.
-   * sirve mas para un arreglo de elementos que devuelve una vista
-   *
-   * If the data type you added in invokes a function returning new values,
-   * this function adds that new data.
-   * it works better for an array of elements that returns a view
-   *
-   * @example
-   * ```javascript
-   *  state.map(value => (<p>{value}</p>));
-   * ```
-   */
-  $setReturnData(t) {
-    return this.currentStoreState.TYPE_ACTION = 3, this.currentStoreState.data = t, this;
-  }
-  $map(t) {
-    if (Array.isArray(this.data))
-      return this.currentStoreState.TYPE_ACTION = 3, this.currentStoreState.data = this.data.map(t);
-    throw new Error("data is not array");
-  }
   /**
    * is more for true and false values (value === data)
    *
@@ -159,139 +172,27 @@ class d {
       yield t;
   }
 }
-class J extends Text {
-  constructor(t) {
-    super(t);
-  }
-  get text() {
-    return this.data;
-  }
-  set text(t) {
-    this.data = t;
-  }
-}
-class nt {
-  constructor() {
-    this.resetWidgets = (t) => {
-      for (const r of t)
-        r.innerHTML = "";
-    };
-  }
-  replaceChild(t, r, n) {
-    if (r.length === n.length)
-      n.forEach((i, s) => {
-        i.replaceWith(r[s]);
-      });
-    else if (n.length === 1)
-      n.at(0).replaceWith(...r);
-    else {
-      let i = n.at(-1).nextSibling;
-      n.forEach((s) => s.remove()), r.forEach((s) => {
-        t.insertBefore(s, i);
-      });
-    }
-  }
-  setText(t, r) {
-    t.textContent = r;
-  }
-  createText(t) {
-    return new J(t);
-  }
-  createWidget(t, r) {
-    return r ? document.createElementNS("http://www.w3.org/2000/svg", t) : document.createElement(t);
-  }
-  appendWidget(t, r) {
-    t.append(
-      ...Array.isArray(r) ? r : [r]
-    );
-  }
-  setProperties(t, r) {
-    for (const n in r) {
-      const i = r[n];
-      n.startsWith("on") ? t.addEventListener(n.slice(2).toLowerCase(), i) : t.setAttribute(n === "className" ? "class" : n, String(i));
-    }
-  }
-  querySelector(t) {
-    return document.querySelector(t);
-  }
-  updateWidget(t) {
-    var r;
-    const n = t.node.childNodes, i = n.item(t.updateIndex), s = i == null ? void 0 : i.previousSibling;
-    if (!t.state)
-      return;
-    if (t.isStringable)
-      return i.data = t.state;
-    const a = Array.from(n).slice(t.updateIndex).slice(0, t.totalChilds), c = (r = a.at(-1)) == null ? void 0 : r.nextSibling;
-    if (t.typeAction === m.NEW) {
-      for (let p = 0; p < a.length; p++)
-        a[p].remove();
-      if (n.length === 0 || !i && !s && !c)
-        return t.node.append(...t.state);
-      if (i.parentNode)
-        return i.before(...t.state);
-      if (c && !i.parentNode)
-        return c.before(...t.state);
-      s.after(...t.state);
-    } else
-      t.typeAction === m.UPDATE && t.node.append(...t.state);
-  }
-}
-const _ = /* @__PURE__ */ new Map(), o = {
-  createStore(e) {
-    _.has(e) || (_.set(e, /* @__PURE__ */ new Map()), Object.defineProperty(o, e, {
-      get() {
-        return _.get(e);
-      }
-    }));
-  }
-};
-o.createStore("tickets");
-function k(e) {
-  const t = e.queue.at(e.ticket);
-  return e.ticket += 1, e.queue.length === e.ticket && (e.ticket = 0), t;
-}
-function D(e) {
-  return o.tickets.has(e) || o.tickets.set(e, {
-    reInvoke: !1,
-    ticket: 0,
-    queue: []
-  }), o.tickets.get(e);
-}
-o.createStore("callbacks");
-function K(e, t) {
-  const r = D(t);
-  return r.reInvoke ? k(r) : (r.queue.push(e), e);
-}
-o.createStore("memo");
-function Y(e, t) {
-  const r = K(e, t);
-  return o.memo.has(r) || o.memo.set(r, !1), (...n) => (o.memo.get(r) === !1 && o.memo.set(r, r(...n)), o.memo.get(r));
-}
-o.createStore("states");
-function q(e) {
-  const t = D(e);
-  return t.reInvoke ? k(t) : t;
-}
-function Q(e, t) {
+function G(e, t) {
   return typeof e[t] == "function" ? e[t].bind(e) : e[t];
 }
-function I(e, t) {
-  const r = t ? q(t) : void 0;
-  if (r instanceof d)
-    return r;
-  const n = new Proxy(new d(e, t), {
+function E(e, t) {
+  const n = t ? A(t) : void 0;
+  if (n instanceof c)
+    return n;
+  const r = new Proxy(new c(e, t), {
     get(i, s) {
       if (s === "flatten")
-        return r;
+        return n;
       if (s in i)
-        return Q(i, s);
+        return G(i, s);
       if (typeof i.data[s] != "undefined")
         return !Array.isArray(i.data) && i.data instanceof Object ? i.data[s] : typeof i.data[s] == "function" ? (...a) => {
           if (typeof i.data[s].apply(i.data, a) != "undefined")
-            return i.$setReturnData(
-              i.data[s].apply(i.data, a)
+            return new u(
+              i.data[s].apply(i.data, a),
+              r
             );
-        } : n;
+        } : r;
       throw new Error("error proxy " + s);
     },
     set(i, s, a) {
@@ -304,128 +205,149 @@ function I(e, t) {
       return !0;
     }
   });
-  return typeof r == "object" && r.queue.push(n), n;
+  return typeof n == "object" && n.queue.push(r), r;
 }
-function it(e, t) {
-  const { state: r, callback: n, option: i } = e != null ? e : {};
-  return n ? n.call(this, { state: r, option: i, children: t }) : t;
+function $(e, t) {
+  const { state: n, callback: r, option: i } = e != null ? e : {};
+  return r ? r.call(this, { state: n, option: i, children: t }) : t;
 }
 let S;
-const R = (e) => e.find((t) => X(t.properties));
-function X({ path: e }) {
-  const t = location.hash.length && location.hash.startsWith("#") ? location.hash.slice(1) : "/", n = new globalThis.URLPattern(e, location.origin).exec(t, location.origin);
-  return S = n ? { path: n.input, params: n.groups } : null, S !== null;
+const T = (e) => e.find((t) => J(t.properties));
+function J({ path: e }) {
+  const t = location.hash.length && location.hash.startsWith("#") ? location.hash.slice(1) : "/", r = new globalThis.URLPattern(e, location.origin).exec(t, location.origin);
+  return S = r ? { path: r.input, params: r.groups } : null, S !== null;
 }
-function st({
+function ee({
   children: e,
   notFount: t
 }) {
-  const r = I(!1, this), n = I(r.data ? t : R(e), this);
-  return Y(() => {
-    this.implementStates(n), window.addEventListener("hashchange", () => {
+  const n = E(!1, this), r = E(n.data ? t : T(e), this);
+  return k(() => {
+    this.implementStates(r), window.addEventListener("hashchange", () => {
       var i;
-      r.data === !1 && r.set(!0), n.set((i = R(e)) != null ? i : t);
+      n.data === !1 && n.set(!0), r.set((i = T(e)) != null ? i : t);
     });
-  }, this)(), n.data.parentNode || (n.data.parentNode = this), n.data;
+  }, this)(), r.data.parentNode || (r.data.parentNode = this), r.data;
 }
-function at(e) {
+function te(e) {
   return e.render.parentNode = this, e.render;
 }
-function ot() {
+function ne() {
   return S.params;
 }
-function ct() {
+function re() {
   return S.path;
 }
-function O(e) {
+function K(e) {
   let t = e.flatten;
-  e.currentStoreState.superCtx && !t && (t = q(
+  e.currentStoreState.superCtx && !t && (t = A(
     e.currentStoreState.superCtx
-  )), t && !(t instanceof d) && (t.reInvoke = !0);
+  )), t && !(t instanceof c) && (t.reInvoke = !0);
 }
-function Z(e, t = () => {
+function H(e, t = () => {
 }) {
-  for (const r of e) {
-    const n = r.set.bind(r), i = r.append.bind(r);
-    r.set = (s) => {
-      O(r), n(s), t(r);
-    }, r.append = (s) => {
-      O(r), i(s), t(r);
+  for (const n of e) {
+    const r = n.set.bind(n);
+    n.set = (i) => {
+      K(n), r(i), t(n);
     };
   }
 }
-function dt(...e) {
-  var t;
-  for (const r of e) {
-    const [n, i] = Array.isArray(r) ? r : [r], s = (t = n.currentStoreState.superCtx) != null ? t : i;
-    if (typeof s == "undefined")
-      throw new Error("el estado no tiene el contexto del componente");
-    Y(() => {
-      i && (n.currentStoreState.superCtx = s), s.implementStates(n);
-    }, s)();
-  }
+function ie(e, t) {
+  k(() => {
+    H(t, (n) => {
+      v.call(e, n.currentStoreState);
+    });
+  }, e)();
 }
-function g(e) {
+function y(e) {
   return Array.isArray(e) ? e : [e];
 }
-function l(e) {
-  return typeof e.type == "string" ? g(e.node) : e.childs.map(U).flat();
+function O(e) {
+  return typeof e.type == "string" ? y(e.node) : e.childs.map(p).flat();
 }
-function U(e) {
-  return e.node ? e.node : tt(e).flat();
+function p(e) {
+  return e.node ? e.node : Q(e).flat();
 }
-function tt(e) {
+function Q(e) {
   const t = [];
-  for (const r of e.childs) {
-    let n = r;
-    r instanceof G && (n = U(r)), t.push(n);
+  for (const n of e.childs) {
+    let r = n;
+    n instanceof h && (r = p(n)), t.push(r);
   }
   return t;
 }
-function j(e) {
+function D(e) {
   let t = e;
   for (; t && typeof t.node != "object"; )
     t = t.parentNode;
   return t;
 }
-function y(e = !1) {
+function w(e = !1) {
   const t = {};
   e && (t.children = this.originalChilds);
-  for (const r in this.properties)
-    e && r === "shareContext" ? t.sharedContext = this.properties[r] : t[r === "className" ? "class" : r] = this.properties[r];
+  for (const n in this.properties)
+    e && n === "shareContext" ? t.sharedContext = this.properties[n] : t[n === "className" ? "class" : n] = this.properties[n];
   return t;
 }
-var et = (e, t, r) => {
+var X = (e, t, n) => {
   if (!t.has(e))
-    throw TypeError("Cannot " + r);
-}, h = (e, t, r) => {
+    throw TypeError("Cannot " + n);
+}, l = (e, t, n) => {
   if (t.has(e))
     throw TypeError("Cannot add the same private member more than once");
-  t instanceof WeakSet ? t.add(e) : t.set(e, r);
-}, u = (e, t, r) => (et(e, t, "access private method"), r), E, L, C, M, T, $, A, F, w, V, x, B, v, z;
-const rt = ["string", "number", "boolean"], H = {
+  t instanceof WeakSet ? t.add(e) : t.set(e, n);
+}, R = (e, t, n) => (X(e, t, "access private method"), n), q, L, N, M, j, _, U;
+function v(e) {
+  this.isReInvoke = !0;
+  const t = this.parentNode, n = typeof this.type == "function" ? D(this) : this, r = this.childs;
+  let i = r.findIndex((g) => g instanceof h || g instanceof c || g instanceof u && g.state.currentStoreState === e);
+  const s = r[i], a = s instanceof h ? [s] : s instanceof u ? s.node : s.toString();
+  typeof this.type == "function" && (r[i] = this.type.call(this, w.call(this, !0)));
+  const o = r[i], f = o instanceof h;
+  f && (o.parentNode = this);
+  const Y = f ? [o.render()] : o instanceof c ? o.toString() : o.node;
+  this.widgedHelper.updateWidget(new class {
+    getNodeParent() {
+      return n.node;
+    }
+    getParent() {
+      return t;
+    }
+    get index() {
+      return i;
+    }
+    get newChilds() {
+      return Y;
+    }
+    get oldChilds() {
+      return a;
+    }
+  }());
+}
+const x = {
   pos: 0,
   current: 0
-}, f = class N {
-  constructor(t, r, n, i) {
-    this.type = t, this.properties = r, this.widgedHelper = n, this.originalChilds = i, h(this, E), h(this, C), h(this, T), h(this, A), h(this, w), h(this, x), h(this, v), this.isReInvoke = !1, this.node = void 0, this.parentNode = void 0, this.childs = void 0, this._id = H.pos, this._ns = !1, this._fnparent = void 0, this._listenerOnCreate = () => {
-    }, typeof this.type == "string" && this.type === "svg" && (this._ns = !0), r && r.onCreate && (this._listenerOnCreate = r.onCreate, delete this.properties.onCreate);
+}, C = class W {
+  constructor(t, n, r, i) {
+    this.type = t, this.properties = n, this.widgedHelper = r, this.originalChilds = i, l(this, q), l(this, L), l(this, N), l(this, j), l(this, _), this.isReInvoke = !1, this.node = void 0, this.parentNode = void 0, this.childs = void 0, this._id = x.pos, this._ns = !1, this._fnparent = void 0, this._listenerOnCreate = () => {
+    }, typeof this.type == "string" && this.type === "svg" && (this._ns = !0), n && n.onCreate && (this._listenerOnCreate = n.onCreate, delete this.properties.onCreate);
     for (let s of i)
-      this._ns && s instanceof N && (s._ns = !0), typeof this.type == "function" && s instanceof N && (s._fnparent = this);
-    H.pos++;
+      this._ns && s instanceof W && (s._ns = !0), typeof this.type == "function" && s instanceof W && (s._fnparent = this);
+    x.pos++;
   }
   createNodeAndChilds() {
-    typeof this.type == "string" && (this.node = this.widgedHelper.createWidget(this.type, this._ns), this.childs = g(this.originalChilds));
+    typeof this.type == "string" && (this.node = this.widgedHelper.createWidget(this.type, this._ns), this.childs = y(this.originalChilds));
   }
   render() {
     if (this.node && (this.widgedHelper.setProperties(
       this.node,
-      y.call(this)
-    ), this.isReInvoke && this.widgedHelper.resetWidgets && this.widgedHelper.resetWidgets(l(this))), typeof this.type == "function" && !this.childs) {
-      const t = y.call(this, !0), r = this.type.name === "Fragment" ? this.type(t) : this.type.call(this, t);
-      this.childs = g(r);
+      w.call(this)
+    ), this.isReInvoke && this.widgedHelper.resetWidgets && this.widgedHelper.resetWidgets(O(this))), typeof this.type == "function" && !this.childs) {
+      const t = w.call(this, !0), n = this.type.name === "Fragment" ? this.type(t) : this.type.call(this, t);
+      this.childs = y(n);
     }
-    return u(this, w, V).call(this), this._listenerOnCreate(this.node), this;
+    return R(this, N, M).call(this), this._listenerOnCreate(this.node), this;
   }
   /**
    * el nodo es un objeto que representa la vista
@@ -433,99 +355,32 @@ const rt = ["string", "number", "boolean"], H = {
    * buscara el objecto de que representa la vista
    */
   getNodeWidget() {
-    return typeof this.node == "object" ? this : j(this);
+    return typeof this.node == "object" ? this : D(this);
   }
   implementStates(...t) {
-    Z(t, (r) => {
-      u(this, v, z).call(this, r.currentStoreState);
+    H(t, (n) => {
+      R(this, _, U).call(this, n.currentStoreState);
     });
   }
 };
-E = /* @__PURE__ */ new WeakSet();
-L = function(e) {
-  if (e instanceof d && !u(this, C, M).call(this, e))
-    throw new Error(
-      "the execution of a state without an executing function is only allowed if they are strings, numbers or boolean values"
-    );
+q = /* @__PURE__ */ new WeakSet();
+L = /* @__PURE__ */ new WeakSet();
+N = /* @__PURE__ */ new WeakSet();
+M = function() {
+  this.getNodeWidget();
+  for (let e of this.childs)
+    (e instanceof C || e instanceof c || e instanceof u) && (e.parentNode = this), e instanceof C ? (typeof this.type == "function" ? e._fnparent = this.type.name !== "Fragment" ? this : this._fnparent : typeof this.type == "string" && this._fnparent && (e._fnparent = this._fnparent), typeof e.type == "string" && this._ns && (e._ns = !0, e.createNodeAndChilds()), this.isReInvoke && (e.createNodeAndChilds(), e.isReInvoke = !0), e.render(), this.widgedHelper.appendWidget(this, e)) : e instanceof u ? this.widgedHelper.appendWidget(this, e) : this.widgedHelper.appendWidget(this, e instanceof c ? (this.implementStates(e), e.toString()) : e);
 };
-C = /* @__PURE__ */ new WeakSet();
-M = function(e) {
-  return Array.isArray(e.data) ? e.data.some((t) => typeof t == "object") === !1 : rt.includes(typeof e.data);
+j = /* @__PURE__ */ new WeakSet();
+_ = /* @__PURE__ */ new WeakSet();
+U = function(e) {
+  return e.superCtx ? v.call(e.superCtx, e) : v.call(this, e);
 };
-T = /* @__PURE__ */ new WeakSet();
-$ = function(e) {
-  var t, r;
-  const n = typeof this.type == "function" ? j(this) : this, i = n.childs;
-  for (let s = 0, a; a = i[s]; s++) {
-    if (this !== a || !(a instanceof d && a.data === e.data))
-      continue;
-    u(this, E, L).call(this, a);
-    const c = {
-      isStringable: !1,
-      node: n.node,
-      typeAction: e.TYPE_ACTION,
-      updateIndex: s
-    };
-    a instanceof d && Object.assign(c, {
-      isStringable: !0,
-      state: e.data,
-      totalChilds: i.length
-    }), a instanceof f && typeof a.type == "function" && (a.type.call(
-      this,
-      y.call(this, !0)
-    ), e.parentNode && (c.state = (r = (t = e.rendering) == null ? void 0 : t.map((p) => l(p.render())).flat()) != null ? r : l(e.data)), c.totalChilds = e.previousData.length), this.widgedHelper.updateWidget(c);
-  }
-};
-A = /* @__PURE__ */ new WeakSet();
-F = function(e) {
-  e.isReInvoke = !0;
-  const t = e.type.call(e, y.call(e, !0)), r = l(e);
-  let n;
-  if (t instanceof f)
-    t.isReInvoke = !0, t.render(), n = l(t), t.parentNode = e;
-  else if (Array.isArray(t))
-    n = t.map(
-      (i) => l(i.render()).at(0)
-    );
-  else
-    throw new Error("could not resolve nodes");
-  this.widgedHelper.replaceChild(
-    this.getNodeWidget().node,
-    n,
-    r
-  ), e.childs = g(t);
-};
-w = /* @__PURE__ */ new WeakSet();
-V = function() {
-  const e = this.getNodeWidget();
-  for (let t of this.childs)
-    (t instanceof f || t instanceof d) && (t.parentNode = this), t instanceof f ? (typeof this.type == "function" ? t._fnparent = this.type.name !== "Fragment" ? this : this._fnparent : typeof this.type == "string" && this._fnparent && (t._fnparent = this._fnparent), typeof t.type == "string" && this._ns && (t._ns = !0, t.createNodeAndChilds()), this.isReInvoke && (t.createNodeAndChilds(), t.isReInvoke = !0), e && typeof t.node == "object" && this.widgedHelper.appendWidget(e.node, t.node), t.render()) : t instanceof d ? (this.implementStates(t), e && u(this, x, B).call(this, this, e.node, t)) : e && this.widgedHelper.appendWidget(
-      e.node,
-      this.widgedHelper.createText(t)
-    );
-};
-x = /* @__PURE__ */ new WeakSet();
-B = function(e, t, r) {
-  var n;
-  const i = r.currentStoreState;
-  Array.isArray(i.data) || Array.isArray(i.rendering) ? ((n = i.rendering) != null ? n : i.data).forEach(
-    (s) => {
-      this.widgedHelper.appendWidget(
-        t,
-        s instanceof f ? s.render().node : s
-      );
-    }
-  ) : this.widgedHelper.appendWidget(t, r);
-};
-v = /* @__PURE__ */ new WeakSet();
-z = function(e) {
-  return e.superCtx ? u(this, A, F).call(this, e.superCtx) : u(this, T, $).call(this, e);
-};
-let G = f, P;
-function ht(e) {
+let h = C, P;
+function se(e) {
   P = e;
 }
-class ut {
+class oe {
   /**
    *
    * @param elements tree childs
@@ -546,36 +401,82 @@ class ut {
    * @param childs tree childs
    * @returns
    */
-  static createElement(t, r, ...n) {
+  static createElement(t, n, ...r) {
     const i = Object.seal(
-      new G(t, r || {}, P, n)
+      new h(t, n || {}, P, r)
     );
     return i.createNodeAndChilds(), i;
   }
 }
-function lt(e, t) {
+function ae(e, t) {
   return t.node = P.querySelector(e), t.render(), t;
 }
+const Z = typeof window != "undefined";
+class de {
+  constructor() {
+    this.resetWidgets = (t) => {
+      for (const n of t)
+        n.innerHTML = "";
+    };
+  }
+  createWidget(t, n) {
+    return n ? document.createElementNS("http://www.w3.org/2000/svg", t) : document.createElement(t);
+  }
+  appendWidget(t, n) {
+    if (Z) {
+      if (typeof n.type == "function")
+        return;
+      const r = t.getNodeWidget(), i = n instanceof h ? O(n) : n instanceof u ? n.node.map(p) : n;
+      Array.isArray(i) ? r.node.append(...i) : r.node.append(i);
+    }
+  }
+  setProperties(t, n) {
+    for (const r in n) {
+      const i = n[r];
+      r.startsWith("on") ? t.addEventListener(r.slice(2).toLowerCase(), i) : t.setAttribute(
+        r === "className" ? "class" : r,
+        String(i)
+      );
+    }
+  }
+  querySelector(t) {
+    return document.querySelector(t);
+  }
+  updateWidget(t) {
+    var n;
+    const r = t.getNodeParent();
+    let { index: i, oldChilds: s, newChilds: a } = t;
+    if (typeof a == "string")
+      r.childNodes.item(i).data = a;
+    else {
+      a = a.map((o) => p(o)), s = s.map((o) => p(o)), a.length > s.length;
+      for (let o = 0; o < a.length; o++) {
+        const f = a[o];
+        s[o] ? s[o].replaceWith(f) : r.insertBefore(f, (n = a[o - 1]) == null ? void 0 : n.nextSibling);
+      }
+    }
+  }
+}
 export {
-  it as Execute,
-  o as HookStore,
-  ut as Reactive,
-  J as ReactiveText,
-  at as Route,
-  st as Routes,
-  d as State,
-  m as StateAction,
-  b as StoreState,
-  nt as WidgetHelper,
-  ht as addWidgetHelper,
-  D as createTicket,
-  Y as exec,
-  q as flattenState,
-  dt as implementStates,
-  k as nextTicket,
-  lt as render,
-  K as useCallback,
-  ot as useParams,
-  ct as usePath,
-  I as useState
+  $ as Execute,
+  d as HookStore,
+  de as NativeRender,
+  oe as Reactive,
+  te as Route,
+  ee as Routes,
+  c as State,
+  B as StateAction,
+  u as StateRender,
+  F as StoreState,
+  se as addWidgetHelper,
+  b as createTicket,
+  k as exec,
+  A as flattenState,
+  ie as implementStates,
+  I as nextTicket,
+  ae as render,
+  V as useCallback,
+  ne as useParams,
+  re as usePath,
+  E as useState
 };
