@@ -1,5 +1,6 @@
 import { State, StoreState, StateRender } from "./State";
-import { exec } from "./hooks";
+import { exec } from "./hooks/exec";
+import { listener } from "./hooks/useState";
 import {
     getNodeWidgetChild,
     getParent,
@@ -15,7 +16,7 @@ const ALLOWED_TYPES = ["string", "number", "boolean"];
  *
  * types of data that the component tree can have
  */
-export type TypeChildNode = string | boolean | number | State | TreeWidget<any>;
+export type TypeChildNode = string | boolean | number | State | TreeWidget<any> | StateRender;
 
 /**
  * type de valores de las etiquetas jsx
@@ -42,7 +43,7 @@ export type ReactiveProps<Properties = {}> = Omit<
 
 /**
  * parametros que recibe cuando el estado cambia de valor
- * controla cada elemento si se añade o se elimina del vista
+ * controla cada elemento si se añade o se elimina de la vista
  *
  * parameters that it receives when the state changes
  * its value control each element if it is added or removed from the view
@@ -56,7 +57,7 @@ export interface UNativeRender<TypeNative = any> {
 }
 
 /**
- * interface para el manejo y controlar de la aplicacion
+ * interface para el manejo y control de la aplicacion
  * se llama cuando se va a renderizar el component
  *
  * interface for managing and controlling the application is called
@@ -75,31 +76,38 @@ export interface NativeRender<TypeNative = any> {
 }
 
 export function _onUpdate<TypeNative = any>(storeState: StoreState<TypeNative>) {
-        this.isReInvoke = true;
-        const parent = this.parentNode;
-        const ctxParentNode: TreeWidget<TypeNative> =
-            typeof this.type === "function" ? getParent(this) : this;
+    this.isReInvoke = true;
+    id.component = this;
+    const parent = this.parentNode;
+    const ctxParentNode: TreeWidget<TypeNative> =
+        typeof this.type === "function" ? getParent(this) : this;
 
-        const childs = this.childs;
-        let updateByIndex = childs.findIndex(child => child instanceof TreeWidget || child instanceof State || (child instanceof StateRender && child.state.currentStoreState === storeState));
-        //if (updateByIndex === -1)
-        
-        const child = childs[updateByIndex];
-        const oldChilds = child instanceof TreeWidget ? [child] : child instanceof StateRender ? child.node : child.toString();
-
-        if (typeof this.type === 'function') {
-            childs[updateByIndex] = this.type.call(this, mergeProperties.call(this, true));
+    const childs = this.childs;
+    // esto es para un estado que no renderiza el componente principal 
+    const acumulator = { findIndex: [], oldChilds: [] };
+    const updateBy = storeState.superCtx ? acumulator : this.childs.reduce((update, child, pos) => {
+        if (/*(child instanceof TreeWidget && this === child) || */(child instanceof State && child.currentStoreState === storeState) || (child instanceof StateRender && child.state.currentStoreState === storeState)) {
+            update.findIndex.push(pos);
+            update.oldChilds.push(child instanceof State ? child.toString() : child.node);
         }
+        return update;
+    }, acumulator);
 
-        const newChild = childs[updateByIndex];
-        const isTree = newChild instanceof TreeWidget;
-        
-        if (isTree) {
-            newChild.parentNode = this;
-        }
-        
-        const newValues = isTree ? [newChild.render()] : newChild instanceof State ? newChild.toString() : newChild.node;
-        
+    const newChilds = typeof this.type === 'function' ? this.type.call(this, mergeProperties.call(this, true)) : false
+
+    if (newChilds !== false) {
+        newChilds.parentNode = this;
+        this.childs = toArray(newChilds);
+    }
+
+    if (newChilds instanceof TreeWidget) {
+        newChilds.isReInvoke = true;
+        newChilds.render();
+    }
+
+    for (let index = 0; index < updateBy.findIndex.length; index++) {
+        const position = updateBy.findIndex[index];
+        const oldChild = updateBy.oldChilds[index];
         this.widgedHelper.updateWidget(new class implements UNativeRender {
             getNodeParent() {
                 return ctxParentNode.node;
@@ -110,22 +118,47 @@ export function _onUpdate<TypeNative = any>(storeState: StoreState<TypeNative>) 
             }
 
             get index() {
-                return updateByIndex;
+                return position;
             }
 
             get newChilds() {
-                return newValues;
+                return newChilds instanceof StateRender ? newChilds.node : newChilds instanceof TreeWidget ? toArray(newChilds) : oldChild;
             }
 
             get oldChilds() {
-                return oldChilds;
+                return oldChild;
             }
         });
     }
 
-const id = {
+    if (updateBy.findIndex.length === 0)
+        this.widgedHelper.updateWidget(new class implements UNativeRender {
+            getNodeParent() {
+                return ctxParentNode.node;
+            }
+
+            getParent() {
+                return parent;
+            }
+
+            get index() {
+                return -1;
+            }
+
+            get newChilds() {
+                return newChilds instanceof StateRender ? newChilds.node : newChilds instanceof TreeWidget ? toArray(newChilds) : newChilds;
+            }
+
+            get oldChilds() {
+                return childs;
+            }
+        });
+}
+
+export const id = {
     pos: 0,
-    current: 0
+    current: 0,
+    component: null
 }
 
 export class TreeWidget<TypeNative = any> {
@@ -154,7 +187,7 @@ export class TreeWidget<TypeNative = any> {
         if (typeof this.type === 'string' && this.type === 'svg') {
             this._ns = true;
         }
-
+        
         if (properties && properties.onCreate) {
             this._listenerOnCreate = properties.onCreate;
             delete this.properties.onCreate;
@@ -240,7 +273,7 @@ export class TreeWidget<TypeNative = any> {
             } else if (child instanceof StateRender) {
                 this.widgedHelper.appendWidget(this, child);
             } else {
-                this.widgedHelper.appendWidget(this, child instanceof State ? (this.implementStates(child), child.toString()) : child);
+                this.widgedHelper.appendWidget(this, child instanceof State ? (listener(child, this), child.toString()) : child);
             }
         }
     }
@@ -275,6 +308,7 @@ export class TreeWidget<TypeNative = any> {
     }
 
     render(): TreeWidget {
+        id.component = this;
         if (this.node) {
             this.widgedHelper.setProperties(
                 this.node,
@@ -313,9 +347,7 @@ export class TreeWidget<TypeNative = any> {
         return getParent(this);
     }
 
-    implementStates(...states: State[]) {
-        setListenerStates(states, (state) => {
-            this.#reRender(state.currentStoreState);
-        });
+    $update(state: State) {
+        _onUpdate.call(this, state.currentStoreState)
     }
 }
