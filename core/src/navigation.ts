@@ -2,8 +2,7 @@ import type {
     TreeWidget,
     ReactivePropsWithChild,
 } from "./TreeWidget";
-import { exec } from "./hooks";
-import { useState } from "./hooks/useState";
+import { exec, useState } from "./hooks";
 
 interface RouteProps {
     path: string;
@@ -29,22 +28,21 @@ export function Routes({
     children,
     notFount,
 }: ReactivePropsWithChild<any>) {
-    const invoke = useState(false, this);
-    const routeState = useState(!invoke.data ? component(children) : null ?? notFount, this);
+    const invoke = useState(false);
+    const routeState = useState(!invoke.value ? component(children)??notFount : null, true);
     
     exec(() => {
-        this.implementStates(routeState);
         window.addEventListener("hashchange", () => {
-            if (invoke.data === false) invoke.set(true);
+            if (invoke.value === false) invoke.set(true);
             routeState.set(component(children) ?? notFount);
         })
     }, this)();
-
-    if (!routeState.data.parentNode) {
-        routeState.data.parentNode = this;
+    
+    if (!routeState.value.parentNode) {
+        routeState.value.parentNode = this;
     }
-
-    return routeState.data;
+    
+    return routeState.value;
 }
 
 export function Route(props: RouteProps) {
