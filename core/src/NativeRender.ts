@@ -51,23 +51,22 @@ export class NativeRender implements INativeRender {
 
     updateWidget(render): void {
         const nodeParent = render.getNodeParent();
-        let {index, oldChilds, newChilds} = render;
+        let { index, oldChilds, newChilds } = render;
         if (typeof newChilds === 'string') {
             nodeParent.childNodes.item(index).data = newChilds;
         } else {
-            newChilds = newChilds.map(child => recursive(child));
-            oldChilds = oldChilds.map(child => recursive(child));
+            newChilds = newChilds.map(child => recursive(child)).flat();
+            oldChilds = oldChilds.map(child => recursive(child)).flat();
             const isMayor = newChilds.length > oldChilds.length;
-            //console.log(newChilds[0].outerHTML,oldChilds);
             for (let index = 0; index < newChilds.length; index++) {
                 const element = newChilds[index];
                 if (oldChilds[index]) oldChilds[index].replaceWith(element);
-                else nodeParent.insertBefore(element, newChilds[index-1]?.nextSibling);
+                else nodeParent.insertBefore(element, newChilds[index - 1]?.nextSibling);
             }
-            
-            /*(!isMayor && newChilds.length !== oldChilds.length && oldChilds.slice(newChilds.length).forEach(element => {
+
+            (!isMayor && newChilds.length !== oldChilds.length && oldChilds.slice(newChilds.length).forEach(element => {
                 element.remove();
-            }));*/
+            }));
         }
     }
 }
