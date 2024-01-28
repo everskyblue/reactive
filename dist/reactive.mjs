@@ -1,72 +1,217 @@
-const m = /* @__PURE__ */ new Map(), d = {
-  createStore(e) {
-    m.has(e) || (m.set(e, /* @__PURE__ */ new Map()), Object.defineProperty(d, e, {
+const _ = /* @__PURE__ */ new Map(), c = {
+  createStore(t) {
+    _.has(t) || (_.set(t, /* @__PURE__ */ new Map()), Object.defineProperty(c, t, {
       get() {
-        return m.get(e);
+        return _.get(t);
       }
     }));
   }
 };
-d.createStore("tickets");
-function I(e) {
-  const t = e.queue.at(e.ticket);
-  return e.ticket += 1, e.queue.length === e.ticket && (e.ticket = 0), t;
+c.createStore("tickets");
+function k(t) {
+  const e = t.queue.at(t.ticket);
+  return t.ticket += 1, t.queue.length === t.ticket && (t.ticket = 0), e;
 }
-function b(e) {
-  d.tickets.has(e) || d.tickets.set(e, {
+function A(t) {
+  c.tickets.has(t.type) || c.tickets.set(t.type, {
     reInvoke: !1,
     ticket: 0,
     queue: []
   });
-  const t = d.tickets.get(e);
-  return e.isReInvoke && (t.reInvoke = !0), t;
+  const e = c.tickets.get(t.type);
+  return t.isReInvoke && (e.reInvoke = !0), e;
 }
-d.createStore("callbacks");
-function V(e, t) {
-  const n = b(t);
-  return n.reInvoke ? I(n) : (n.queue.push(e), e);
+c.createStore("states");
+function U(t) {
+  const e = A(t);
+  return e.reInvoke ? k(e) : e;
 }
-d.createStore("memo");
-function k(e, t) {
-  const n = V(e, t);
-  return d.memo.has(n) || d.memo.set(n, !1), (...r) => (d.memo.get(n) === !1 && d.memo.set(n, n(...r)), d.memo.get(n));
-}
-d.createStore("states");
-function A(e) {
-  const t = b(e);
-  return t.reInvoke ? I(t) : t;
-}
-var B = /* @__PURE__ */ ((e) => (e[e.CREATE = 0] = "CREATE", e[e.NEW = 1] = "NEW", e[e.UPDATE = 2] = "UPDATE", e[e.PREPEND = 3] = "PREPEND", e))(B || {});
-class u {
-  constructor(t, n) {
-    this.state = n, this._parentNode = null, this.node = null, this.node = t.map((r) => r.render());
+class T {
+  constructor(e, n, r) {
+    this.type = e, this.target = n, this.data = r, this.timeStamp = Date.now();
   }
-  set parentNode(t) {
-    this._parentNode = t, t.implementStates(this.state);
+}
+class I extends T {
+  constructor() {
+    super(...arguments), this.$queue = [];
+  }
+  addListener(e) {
+    return this.$queue.push(e), this;
+  }
+  _invoke() {
+    for (const e of this.$queue)
+      e(new T(this.type, this.target, this.data));
+  }
+}
+class F extends Set {
+  _invokeAll(e) {
+    for (const n of Array.from(this))
+      n._invoke();
+  }
+  _findIn(e, n) {
+    return Array.from(this).find((r) => r[e] === n);
+  }
+}
+function B(t, e = () => {
+}, n) {
+  for (const r of t)
+    ;
+}
+function ie(t, e) {
+  B(e, (n) => {
+    j.call(t, n.currentStoreState);
+  });
+}
+function h(t) {
+  return Array.isArray(t) ? t : [t];
+}
+function R(t) {
+  return typeof t.type == "string" ? h(t.node) : t.childs.map(y).flat();
+}
+function y(t) {
+  return t.node ? t.node : V(t).flat();
+}
+function V(t) {
+  const e = [];
+  for (const n of t.childs) {
+    let r = n;
+    n instanceof p && (r = y(n)), e.push(r);
+  }
+  return e;
+}
+function H(t) {
+  let e = t;
+  for (; e && typeof e.node != "object"; )
+    e = e.parentNode;
+  return e;
+}
+function N(t = !1) {
+  const e = {};
+  t && (e.children = this.originalChilds);
+  for (const n in this.properties)
+    t && n === "shareContext" ? e.sharedContext = this.properties[n] : e[n === "className" ? "class" : n] = this.properties[n];
+  return e;
+}
+function Y(t, e, n) {
+  var r = null, o = null, i = function() {
+    r && (clearTimeout(r), o = null, r = null);
+  }, s = function() {
+    var a = o;
+    i(), a && a();
+  }, u = function() {
+    if (!e)
+      return t.apply(this, arguments);
+    var a = this, l = arguments, P = n && !r;
+    if (i(), o = function() {
+      t.apply(a, l);
+    }, r = setTimeout(function() {
+      if (r = null, !P) {
+        var $ = o;
+        return o = null, $();
+      }
+    }, e), P)
+      return o();
+  };
+  return u.cancel = i, u.flush = s, u;
+}
+function z(t) {
+  const e = /* @__PURE__ */ new Map();
+  return (n, r) => {
+    if (r && r.superCtx && !e.has(n))
+      e.set(n, new F([new I("changeState", n, r).addListener(t)]));
+    else if (r)
+      e.has(n) && r.superCtx && e.get(n).add(new I("changeState", n, r).addListener(t));
+    else
+      return e.get(n);
+  };
+}
+const m = z((t) => {
+  t.target.$update(t.data);
+}), G = (() => {
+  let t;
+  const e = Y(() => {
+    const n = t;
+    t = null, n && n._invoke();
+  }, 10);
+  return (n, r) => {
+    t = n._findIn("data", r), e();
+  };
+})();
+function J(t, e, n) {
+  return typeof t[e] == "function" ? t[e].bind(t) : t[e];
+}
+function S(t, e = !1) {
+  const n = f.component, r = U(n);
+  if (r instanceof g)
+    return r;
+  const o = new Proxy(new g(t, e), {
+    get(i, s) {
+      if (s in i)
+        return s === "set" && n ? (u) => (i.set(u), G(m(n), o)) : J(i, s);
+      if (typeof i.value[s] != "undefined")
+        return !Array.isArray(i.value) && i.value instanceof Object ? i.value[s] : typeof i.value[s] == "function" ? (...u) => {
+          if (typeof i.value[s].apply(i.value, u) != "undefined")
+            return new d(
+              i.value[s].apply(i.value, u),
+              o
+            );
+        } : o;
+      throw new Error("error proxy " + s);
+    },
+    set(i, s, u) {
+      if (s in i)
+        i[s] = u;
+      else if (s in i.data)
+        i.data[s] = u;
+      else
+        return !1;
+      return !0;
+    }
+  });
+  return typeof r == "object" && r.queue.push(o), m(n, o), o;
+}
+function se(t) {
+  const e = {}, n = (i) => (s) => {
+    e[i].set(s);
+  }, r = (i) => {
+    let s;
+    return () => (s || (s = S(t[i])), s);
+  };
+  for (let i in t) {
+    const s = typeof t[i] == "function" ? { value: t[i].bind(e) } : { get: r(i), set: n(i) };
+    Object.defineProperty(e, i, s);
+  }
+  let o;
+  return () => o != null ? o : o = S(e);
+}
+var K = /* @__PURE__ */ ((t) => (t[t.CREATE = 0] = "CREATE", t[t.NEW = 1] = "NEW", t[t.UPDATE = 2] = "UPDATE", t[t.DELETE = 3] = "DELETE", t))(K || {});
+class d {
+  constructor(e, n) {
+    this.state = n, this._parentNode = null, this.node = null, this.node = e.map((r) => r.render());
+  }
+  set parentNode(e) {
+    this._parentNode = e, m(this.state, e);
   }
   get parentNode() {
     return this._parentNode;
   }
 }
-class F {
+class Q {
   /**
    *
    * @param superCtx context superiority
    * @param data create data
    * @param TYPE_ACTION default action create
    */
-  constructor(t, n, r = 0) {
-    this.superCtx = t, this.TYPE_ACTION = r, this.store = [], this.data = n;
+  constructor(e, n, r = 0) {
+    this.superCtx = n, this.TYPE_ACTION = r, this.store = [], this.data = e;
   }
   /**
    * add new data and store
    */
-  set data(t) {
-    if (this.TYPE_ACTION === 3 && (this.rendering = t), this.TYPE_ACTION !== 3) {
-      if (this.store.includes(t))
-        return;
-      this.store.push(t);
-    }
+  set data(e) {
+    var n;
+    Array.isArray(e) && (this.TYPE_ACTION = e.length > ((n = this.previousData) == null ? void 0 : n.length) ? 2 : 3), this.store.push(e);
   }
   /**
    * current data
@@ -83,22 +228,13 @@ class F {
     return this.store.at(-2);
   }
   toString() {
-    var t, n;
-    return (n = (t = this.data) == null ? void 0 : t.toString()) != null ? n : "";
+    var e, n;
+    return (n = (e = this.data) == null ? void 0 : e.toString()) != null ? n : "";
   }
 }
-function z(e, t, n) {
-  t.TYPE_ACTION = n, t.data = e;
-}
-class c {
-  /* public set data(v: any) {
-      this.store.forEach((storeState, ctx) => {
-          storeState.data = v;
-      });
-      //this.currentStoreState.data = v;
-  } */
-  constructor(t, n) {
-    this.store = /* @__PURE__ */ new Map(), this.currentStoreState = new F(n, t);
+class g {
+  constructor(e, n) {
+    this._store = /* @__PURE__ */ new Map(), this.currentStoreState = new Q(e, n);
   }
   get parentNode() {
     return this.currentParentNode;
@@ -114,52 +250,36 @@ class c {
    *
    * update the node the status is on
    */
-  set parentNode(t) {
+  set parentNode(e) {
   }
-  get data() {
+  get value() {
     return this.currentStoreState.data;
+  }
+  set value(e) {
+    this.currentStoreState.data = e;
   }
   /**
    *
    * @param proxy store proxy
    */
-  addProxySelf(t) {
-    return this.proxySelf = t, this;
+  addProxySelf(e) {
+    return this.proxySelf = e, this;
   }
   /**
    * nuevo estado
    *
    * new state
    */
-  set(t) {
-    z(
-      t,
-      this.currentStoreState,
-      1
-      /* NEW */
-    );
+  set(e) {
+    this.value = e;
   }
-  /**
-   * si hay nuevos datos invoca la funcion envolvente que retorna los nuevos valores
-   *
-   * if there is new data, call the enclosing function that returns the new values
-   */
-  /*invokeNode() {
-      if (this.store.size > 1) {
-          throw new Error("error");
-      }
-      for (const [ctx, storeState] of this.store.entries()) {
-          console.log("RENDER STATE", ctx, storeState);
-          ctx.render(true, storeState);
-      }
-  }*/
   /**
    * is more for true and false values (value === data)
    *
    * @returns
    */
-  is(t) {
-    return this.currentStoreState.data === t;
+  is(e) {
+    return this.value === e;
   }
   toString() {
     return this.currentStoreState.toString();
@@ -168,186 +288,87 @@ class c {
     return this.toString();
   }
   *[Symbol.iterator]() {
-    for (const t of this.currentStoreState.data)
-      yield t;
+    for (const e of this.value)
+      yield e;
   }
 }
-function G(e, t) {
-  return typeof e[t] == "function" ? e[t].bind(e) : e[t];
-}
-function E(e, t) {
-  const n = t ? A(t) : void 0;
-  if (n instanceof c)
-    return n;
-  const r = new Proxy(new c(e, t), {
-    get(i, s) {
-      if (s === "flatten")
-        return n;
-      if (s in i)
-        return G(i, s);
-      if (typeof i.data[s] != "undefined")
-        return !Array.isArray(i.data) && i.data instanceof Object ? i.data[s] : typeof i.data[s] == "function" ? (...a) => {
-          if (typeof i.data[s].apply(i.data, a) != "undefined")
-            return new u(
-              i.data[s].apply(i.data, a),
-              r
-            );
-        } : r;
-      throw new Error("error proxy " + s);
-    },
-    set(i, s, a) {
-      if (s in i)
-        i[s] = a;
-      else if (s in i.data)
-        i.data[s] = a;
-      else
-        return !1;
-      return !0;
-    }
-  });
-  return typeof n == "object" && n.queue.push(r), r;
-}
-function $(e, t) {
-  const { state: n, callback: r, option: i } = e != null ? e : {};
-  return r ? r.call(this, { state: n, option: i, children: t }) : t;
-}
-let S;
-const T = (e) => e.find((t) => J(t.properties));
-function J({ path: e }) {
-  const t = location.hash.length && location.hash.startsWith("#") ? location.hash.slice(1) : "/", r = new globalThis.URLPattern(e, location.origin).exec(t, location.origin);
-  return S = r ? { path: r.input, params: r.groups } : null, S !== null;
-}
-function ee({
-  children: e,
-  notFount: t
-}) {
-  const n = E(!1, this), r = E(n.data ? t : T(e), this);
-  return k(() => {
-    this.implementStates(r), window.addEventListener("hashchange", () => {
-      var i;
-      n.data === !1 && n.set(!0), r.set((i = T(e)) != null ? i : t);
-    });
-  }, this)(), r.data.parentNode || (r.data.parentNode = this), r.data;
-}
-function te(e) {
-  return e.render.parentNode = this, e.render;
-}
-function ne() {
-  return S.params;
-}
-function re() {
-  return S.path;
-}
-function K(e) {
-  let t = e.flatten;
-  e.currentStoreState.superCtx && !t && (t = A(
-    e.currentStoreState.superCtx
-  )), t && !(t instanceof c) && (t.reInvoke = !0);
-}
-function H(e, t = () => {
-}) {
-  for (const n of e) {
-    const r = n.set.bind(n);
-    n.set = (i) => {
-      K(n), r(i), t(n);
-    };
-  }
-}
-function ie(e, t) {
-  k(() => {
-    H(t, (n) => {
-      v.call(e, n.currentStoreState);
-    });
-  }, e)();
-}
-function y(e) {
-  return Array.isArray(e) ? e : [e];
-}
-function O(e) {
-  return typeof e.type == "string" ? y(e.node) : e.childs.map(p).flat();
-}
-function p(e) {
-  return e.node ? e.node : Q(e).flat();
-}
-function Q(e) {
-  const t = [];
-  for (const n of e.childs) {
-    let r = n;
-    n instanceof h && (r = p(n)), t.push(r);
-  }
-  return t;
-}
-function D(e) {
-  let t = e;
-  for (; t && typeof t.node != "object"; )
-    t = t.parentNode;
-  return t;
-}
-function w(e = !1) {
-  const t = {};
-  e && (t.children = this.originalChilds);
-  for (const n in this.properties)
-    e && n === "shareContext" ? t.sharedContext = this.properties[n] : t[n === "className" ? "class" : n] = this.properties[n];
-  return t;
-}
-var X = (e, t, n) => {
-  if (!t.has(e))
+var X = (t, e, n) => {
+  if (!e.has(t))
     throw TypeError("Cannot " + n);
-}, l = (e, t, n) => {
-  if (t.has(e))
+}, v = (t, e, n) => {
+  if (e.has(t))
     throw TypeError("Cannot add the same private member more than once");
-  t instanceof WeakSet ? t.add(e) : t.set(e, n);
-}, R = (e, t, n) => (X(e, t, "access private method"), n), q, L, N, M, j, _, U;
-function v(e) {
-  this.isReInvoke = !0;
-  const t = this.parentNode, n = typeof this.type == "function" ? D(this) : this, r = this.childs;
-  let i = r.findIndex((g) => g instanceof h || g instanceof c || g instanceof u && g.state.currentStoreState === e);
-  const s = r[i], a = s instanceof h ? [s] : s instanceof u ? s.node : s.toString();
-  typeof this.type == "function" && (r[i] = this.type.call(this, w.call(this, !0)));
-  const o = r[i], f = o instanceof h;
-  f && (o.parentNode = this);
-  const Y = f ? [o.render()] : o instanceof c ? o.toString() : o.node;
-  this.widgedHelper.updateWidget(new class {
+  e instanceof WeakSet ? e.add(t) : e.set(t, n);
+}, Z = (t, e, n) => (X(t, e, "access private method"), n), L, q, C, D, O, M;
+function j(t) {
+  this.isReInvoke = !0, f.component = this;
+  const e = this.parentNode, n = typeof this.type == "function" ? H(this) : this, r = this.childs, o = { findIndex: [], oldChilds: [] }, i = t.superCtx ? o : this.childs.reduce((u, a, l) => (
+    /*(child instanceof TreeWidget && this === child) || */
+    ((a instanceof g && a.currentStoreState === t || a instanceof d && a.state.currentStoreState === t) && (u.findIndex.push(l), u.oldChilds.push(a instanceof g ? a.toString() : a.node)), u)
+  ), o), s = typeof this.type == "function" ? this.type.call(this, N.call(this, !0)) : !1;
+  s !== !1 && (s.parentNode = this, this.childs = h(s)), s instanceof p && (s.isReInvoke = !0, s.render());
+  for (let u = 0; u < i.findIndex.length; u++) {
+    const a = i.findIndex[u], l = i.oldChilds[u];
+    this.widgedHelper.updateWidget(new class {
+      getNodeParent() {
+        return n.node;
+      }
+      getParent() {
+        return e;
+      }
+      get index() {
+        return a;
+      }
+      get newChilds() {
+        return s instanceof d ? s.node : s instanceof p ? h(s) : l;
+      }
+      get oldChilds() {
+        return l;
+      }
+    }());
+  }
+  i.findIndex.length === 0 && this.widgedHelper.updateWidget(new class {
     getNodeParent() {
       return n.node;
     }
     getParent() {
-      return t;
+      return e;
     }
     get index() {
-      return i;
+      return -1;
     }
     get newChilds() {
-      return Y;
+      return s instanceof d ? s.node : s instanceof p ? h(s) : s;
     }
     get oldChilds() {
-      return a;
+      return r;
     }
   }());
 }
-const x = {
+const f = {
   pos: 0,
-  current: 0
-}, C = class W {
-  constructor(t, n, r, i) {
-    this.type = t, this.properties = n, this.widgedHelper = r, this.originalChilds = i, l(this, q), l(this, L), l(this, N), l(this, j), l(this, _), this.isReInvoke = !1, this.node = void 0, this.parentNode = void 0, this.childs = void 0, this._id = x.pos, this._ns = !1, this._fnparent = void 0, this._listenerOnCreate = () => {
+  current: 0,
+  component: null
+}, W = class x {
+  constructor(e, n, r, o) {
+    this.type = e, this.properties = n, this.widgedHelper = r, this.originalChilds = o, v(this, L), v(this, q), v(this, C), v(this, O), v(this, M), this.isReInvoke = !1, this.node = void 0, this.parentNode = void 0, this.childs = void 0, this._id = f.pos, this._ns = !1, this._fnparent = void 0, this._listenerOnCreate = () => {
     }, typeof this.type == "string" && this.type === "svg" && (this._ns = !0), n && n.onCreate && (this._listenerOnCreate = n.onCreate, delete this.properties.onCreate);
-    for (let s of i)
-      this._ns && s instanceof W && (s._ns = !0), typeof this.type == "function" && s instanceof W && (s._fnparent = this);
-    x.pos++;
+    for (let i of o)
+      this._ns && i instanceof x && (i._ns = !0), typeof this.type == "function" && i instanceof x && (i._fnparent = this);
+    f.pos++;
   }
   createNodeAndChilds() {
-    typeof this.type == "string" && (this.node = this.widgedHelper.createWidget(this.type, this._ns), this.childs = y(this.originalChilds));
+    typeof this.type == "string" && (this.node = this.widgedHelper.createWidget(this.type, this._ns), this.childs = h(this.originalChilds));
   }
   render() {
-    if (this.node && (this.widgedHelper.setProperties(
+    if (f.component = this, this.node && (this.widgedHelper.setProperties(
       this.node,
-      w.call(this)
-    ), this.isReInvoke && this.widgedHelper.resetWidgets && this.widgedHelper.resetWidgets(O(this))), typeof this.type == "function" && !this.childs) {
-      const t = w.call(this, !0), n = this.type.name === "Fragment" ? this.type(t) : this.type.call(this, t);
-      this.childs = y(n);
+      N.call(this)
+    ), this.isReInvoke && this.widgedHelper.resetWidgets && this.widgedHelper.resetWidgets(R(this))), typeof this.type == "function" && !this.childs) {
+      const e = N.call(this, !0), n = this.type.name === "Fragment" ? this.type(e) : this.type.call(this, e);
+      this.childs = h(n);
     }
-    return R(this, N, M).call(this), this._listenerOnCreate(this.node), this;
+    return Z(this, C, D).call(this), this._listenerOnCreate(this.node), this;
   }
   /**
    * el nodo es un objeto que representa la vista
@@ -355,41 +376,74 @@ const x = {
    * buscara el objecto de que representa la vista
    */
   getNodeWidget() {
-    return typeof this.node == "object" ? this : D(this);
+    return typeof this.node == "object" ? this : H(this);
   }
-  implementStates(...t) {
-    H(t, (n) => {
-      R(this, _, U).call(this, n.currentStoreState);
-    });
+  $update(e) {
+    j.call(this, e.currentStoreState);
   }
 };
-q = /* @__PURE__ */ new WeakSet();
 L = /* @__PURE__ */ new WeakSet();
-N = /* @__PURE__ */ new WeakSet();
-M = function() {
+q = /* @__PURE__ */ new WeakSet();
+C = /* @__PURE__ */ new WeakSet();
+D = function() {
   this.getNodeWidget();
-  for (let e of this.childs)
-    (e instanceof C || e instanceof c || e instanceof u) && (e.parentNode = this), e instanceof C ? (typeof this.type == "function" ? e._fnparent = this.type.name !== "Fragment" ? this : this._fnparent : typeof this.type == "string" && this._fnparent && (e._fnparent = this._fnparent), typeof e.type == "string" && this._ns && (e._ns = !0, e.createNodeAndChilds()), this.isReInvoke && (e.createNodeAndChilds(), e.isReInvoke = !0), e.render(), this.widgedHelper.appendWidget(this, e)) : e instanceof u ? this.widgedHelper.appendWidget(this, e) : this.widgedHelper.appendWidget(this, e instanceof c ? (this.implementStates(e), e.toString()) : e);
+  for (let t of this.childs)
+    (t instanceof W || t instanceof g || t instanceof d) && (t.parentNode = this), t instanceof W ? (typeof this.type == "function" ? t._fnparent = this.type.name !== "Fragment" ? this : this._fnparent : typeof this.type == "string" && this._fnparent && (t._fnparent = this._fnparent), typeof t.type == "string" && this._ns && (t._ns = !0, t.createNodeAndChilds()), this.isReInvoke && (t.createNodeAndChilds(), t.isReInvoke = !0), t.render(), this.widgedHelper.appendWidget(this, t)) : t instanceof d ? this.widgedHelper.appendWidget(this, t) : this.widgedHelper.appendWidget(this, t instanceof g ? (m(t, this), t.toString()) : t);
 };
-j = /* @__PURE__ */ new WeakSet();
-_ = /* @__PURE__ */ new WeakSet();
-U = function(e) {
-  return e.superCtx ? v.call(e.superCtx, e) : v.call(this, e);
-};
-let h = C, P;
-function se(e) {
-  P = e;
+O = /* @__PURE__ */ new WeakSet();
+M = /* @__PURE__ */ new WeakSet();
+let p = W;
+function ee(t) {
+  const e = A(f.component);
+  return e.reInvoke ? k(e) : (e.queue.push(t), t);
 }
-class oe {
+c.createStore("memo");
+function te(t) {
+  const e = ee(t);
+  return c.memo.has(e) || c.memo.set(e, !1), (...n) => (c.memo.get(e) === !1 && c.memo.set(e, e(...n)), c.memo.get(e));
+}
+let w;
+const b = (t) => t.find((e) => ne(e.properties));
+function ne({ path: t }) {
+  const e = location.hash.length && location.hash.startsWith("#") ? location.hash.slice(1) : "/", r = new globalThis.URLPattern(t, location.origin).exec(e, location.origin);
+  return w = r ? { path: r.input, params: r.groups } : null, w !== null;
+}
+function oe({
+  children: t,
+  notFount: e
+}) {
+  var n;
+  const r = S(!1), o = S(r.value ? null : (n = b(t)) != null ? n : e, !0);
+  return te(() => {
+    window.addEventListener("hashchange", () => {
+      var i;
+      r.value === !1 && r.set(!0), o.set((i = b(t)) != null ? i : e);
+    });
+  })(), o.value.parentNode || (o.value.parentNode = this), o.value;
+}
+function ae(t) {
+  return t.render.parentNode = this, t.render;
+}
+function ue() {
+  return w.params;
+}
+function ce() {
+  return w.path;
+}
+let E;
+function le(t) {
+  E = t;
+}
+class de {
   /**
    *
    * @param elements tree childs
    * @returns
    */
   static Fragment({
-    children: t
+    children: e
   }) {
-    return t;
+    return e;
   }
   /**
    * crear la interfaz del nodo
@@ -401,82 +455,87 @@ class oe {
    * @param childs tree childs
    * @returns
    */
-  static createElement(t, n, ...r) {
-    const i = Object.seal(
-      new h(t, n || {}, P, r)
+  static createElement(e, n, ...r) {
+    const o = Object.seal(
+      new p(e, n || {}, E, r)
     );
-    return i.createNodeAndChilds(), i;
+    return o.createNodeAndChilds(), o;
   }
 }
-function ae(e, t) {
-  return t.node = P.querySelector(e), t.render(), t;
+function he(t, e) {
+  return e.node = E.querySelector(t), e.render(), e;
 }
-const Z = typeof window != "undefined";
-class de {
+const re = typeof window != "undefined";
+class fe {
   constructor() {
-    this.resetWidgets = (t) => {
-      for (const n of t)
+    this.resetWidgets = (e) => {
+      for (const n of e)
         n.innerHTML = "";
     };
   }
-  createWidget(t, n) {
-    return n ? document.createElementNS("http://www.w3.org/2000/svg", t) : document.createElement(t);
+  createWidget(e, n) {
+    return n ? document.createElementNS("http://www.w3.org/2000/svg", e) : document.createElement(e);
   }
-  appendWidget(t, n) {
-    if (Z) {
+  appendWidget(e, n) {
+    if (re) {
       if (typeof n.type == "function")
         return;
-      const r = t.getNodeWidget(), i = n instanceof h ? O(n) : n instanceof u ? n.node.map(p) : n;
-      Array.isArray(i) ? r.node.append(...i) : r.node.append(i);
+      const r = e.getNodeWidget(), o = n instanceof p ? R(n) : n instanceof d ? n.node.map(y) : n;
+      Array.isArray(o) ? r.node.append(...o) : r.node.append(o);
     }
   }
-  setProperties(t, n) {
+  setProperties(e, n) {
     for (const r in n) {
-      const i = n[r];
-      r.startsWith("on") ? t.addEventListener(r.slice(2).toLowerCase(), i) : t.setAttribute(
+      const o = n[r];
+      r.startsWith("on") ? e.addEventListener(r.slice(2).toLowerCase(), o) : e.setAttribute(
         r === "className" ? "class" : r,
-        String(i)
+        String(o)
       );
     }
   }
-  querySelector(t) {
-    return document.querySelector(t);
+  querySelector(e) {
+    return document.querySelector(e);
   }
-  updateWidget(t) {
+  updateWidget(e) {
     var n;
-    const r = t.getNodeParent();
-    let { index: i, oldChilds: s, newChilds: a } = t;
-    if (typeof a == "string")
-      r.childNodes.item(i).data = a;
+    const r = e.getNodeParent();
+    let { index: o, oldChilds: i, newChilds: s } = e;
+    if (typeof s == "string")
+      r.childNodes.item(o).data = s;
     else {
-      a = a.map((o) => p(o)), s = s.map((o) => p(o)), a.length > s.length;
-      for (let o = 0; o < a.length; o++) {
-        const f = a[o];
-        s[o] ? s[o].replaceWith(f) : r.insertBefore(f, (n = a[o - 1]) == null ? void 0 : n.nextSibling);
+      s = s.map((a) => y(a)).flat(), i = i.map((a) => y(a)).flat();
+      const u = s.length > i.length;
+      for (let a = 0; a < s.length; a++) {
+        const l = s[a];
+        i[a] ? i[a].replaceWith(l) : r.insertBefore(l, (n = s[a - 1]) == null ? void 0 : n.nextSibling);
       }
+      !u && s.length !== i.length && i.slice(s.length).forEach((a) => {
+        a.remove();
+      });
     }
   }
 }
 export {
-  $ as Execute,
-  d as HookStore,
-  de as NativeRender,
-  oe as Reactive,
-  te as Route,
-  ee as Routes,
-  c as State,
-  B as StateAction,
-  u as StateRender,
-  F as StoreState,
-  se as addWidgetHelper,
-  b as createTicket,
-  k as exec,
-  A as flattenState,
+  c as HookStore,
+  fe as NativeRender,
+  de as Reactive,
+  ae as Route,
+  oe as Routes,
+  g as State,
+  K as StateAction,
+  d as StateRender,
+  Q as StoreState,
+  le as addWidgetHelper,
+  se as createState,
+  A as createTicket,
+  te as exec,
+  U as flattenState,
   ie as implementStates,
-  I as nextTicket,
-  ae as render,
-  V as useCallback,
-  ne as useParams,
-  re as usePath,
-  E as useState
+  m as listener,
+  k as nextTicket,
+  he as render,
+  ee as useCallback,
+  ue as useParams,
+  ce as usePath,
+  S as useState
 };
