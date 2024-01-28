@@ -1,4 +1,5 @@
 import { TreeWidget } from "./TreeWidget";
+import { listener } from "./hooks/useState";
 
 /**
  * tipo acción del estado para indicar una accion de los lementos y crear cambios: creado, nuevo y actualizado
@@ -6,22 +7,10 @@ import { TreeWidget } from "./TreeWidget";
  * action type of the state to indicate an action of the elements and create changes: created, new and updated
  */
 export enum StateAction {
-    // create state
     CREATE,
-
-    // new state
     NEW,
-
-    // update current state
     UPDATE,
-
-    /**
-     * manejo interno del renderizado si el estado a devuelto un nuevo objecto de valores
-     *
-     * internal handling of rendering if the state has returned a new values object
-     * @see {@link TreeWidget}
-     */
-    PREPEND,
+    DELETE,
 }
 
 export class StateRender {
@@ -34,7 +23,7 @@ export class StateRender {
     
     set parentNode(parent: TreeWidget<any>) {
         this._parentNode = parent;
-        parent.implementStates(this.state);
+        listener(this.state, parent);
     }
     
     get parentNode() {
@@ -48,9 +37,7 @@ export class StateRender {
  * stores each status update
  */
 export class StoreState<TypeWidget> {
-    public rendering: TreeWidget<any>[];
-    private _current: any;
-    private store: any[] = [];
+    private readonly store: any[] = [];
     public parentNode: TreeWidget<any>;
 
     /**
@@ -60,8 +47,8 @@ export class StoreState<TypeWidget> {
      * @param TYPE_ACTION default action create
      */
     constructor(
-        public superCtx: TreeWidget<TypeWidget>,
         data: any,
+        public superCtx: TreeWidget<TypeWidget>,
         public TYPE_ACTION: StateAction = StateAction.CREATE
     ) {
         this.data = data;
@@ -71,15 +58,11 @@ export class StoreState<TypeWidget> {
      * add new data and store
      */
     public set data(v: any) {
-        if (this.TYPE_ACTION === StateAction.PREPEND) {
-            this.rendering = v;
+        //if (this.store.includes(v)) return;
+        if (Array.isArray(v)) {
+            this.TYPE_ACTION = v.length > this.previousData?.length ? StateAction.UPDATE : StateAction.DELETE; //v.length < this.previousData.length;
         }
-
-        // not TreeWidget<any>[]
-        if (this.TYPE_ACTION !== StateAction.PREPEND) {
-            if (this.store.includes(v)) return;
-            this.store.push(v);
-        }
+        this.store.push(v);
     }
 
     /**
@@ -102,10 +85,7 @@ export class StoreState<TypeWidget> {
         return this.data?.toString() ?? "";
     }
 }
-function setData(newValue: any, storeState: StoreState<any>, action: StateAction) {
-    storeState.TYPE_ACTION = action;
-    storeState.data = newValue;
-}
+
 /**
  * controla el estado y la vista
  *
@@ -143,7 +123,7 @@ export class State<TypeWidget = any> implements Record<string, any> {
      */
     public currentStoreState: StoreState<TypeWidget>;
 
-    public store: Map<TreeWidget<any>, StoreState<TypeWidget>> =
+    public _store: Map<TreeWidget<any>, StoreState<TypeWidget>> =
         new Map();
 
     public get parentNode(): TreeWidget<any> {
@@ -182,22 +162,19 @@ export class State<TypeWidget = any> implements Record<string, any> {
         this.store.set(parent, this.currentStoreState);*/
     }
 
-    public get data(): any {
+    public get value(): any {
         return this.currentStoreState.data;
     }
 
-    /* public set data(v: any) {
-        this.store.forEach((storeState, ctx) => {
-            storeState.data = v;
-        });
-        //this.currentStoreState.data = v;
-    } */
+    public set value(v: any) {
+        this.currentStoreState.data = v;
+    }
 
     constructor(
         data: any,
         superCtx: TreeWidget<TypeWidget>
     ) {
-        this.currentStoreState = new StoreState<TypeWidget>(superCtx, data);
+        this.currentStoreState = new StoreState<TypeWidget>(data, superCtx);
     }
 
     /**
@@ -215,23 +192,8 @@ export class State<TypeWidget = any> implements Record<string, any> {
      * new state
      */
     set(newValue: any) {
-        setData(newValue, this.currentStoreState, StateAction.NEW);
+        this.value = newValue;
     }
-
-    /**
-     * si hay nuevos datos invoca la funcion envolvente que retorna los nuevos valores
-     *
-     * if there is new data, call the enclosing function that returns the new values
-     */
-    /*invokeNode() {
-        if (this.store.size > 1) {
-            throw new Error("error");
-        }
-        for (const [ctx, storeState] of this.store.entries()) {
-            console.log("RENDER STATE", ctx, storeState);
-            ctx.render(true, storeState);
-        }
-    }*/
 
     /**
      * is more for true and false values (value === data)
@@ -239,7 +201,7 @@ export class State<TypeWidget = any> implements Record<string, any> {
      * @returns
      */
     is(value: any): boolean {
-        return this.currentStoreState.data === value;
+        return this.value === value;
     }
 
     toString() {
@@ -251,7 +213,7 @@ export class State<TypeWidget = any> implements Record<string, any> {
     }
 
     *[Symbol.iterator]() {
-        for (const iterator of this.currentStoreState.data) {
+        for (const iterator of this.value) {
             yield iterator;
         }
     }

@@ -1,11 +1,8 @@
-import { TreeWidget } from "../TreeWidget";
-import { HookStore } from "./hookStore";
+import { id } from "../TreeWidget";
 import {createTicket, nextTicket} from './stackTicket'
 
-HookStore.createStore("callbacks");
-
-export function useCallback(callback: (...args: any[]) => any, ctx: TreeWidget<any>) {
-    const callbacks = createTicket(ctx);
+export function useCallback(callback: (...args: any[]) => any) {
+    const callbacks = createTicket(id.component);
     
     if (callbacks.reInvoke) {
         return nextTicket(callbacks);

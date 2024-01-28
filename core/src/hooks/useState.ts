@@ -1,7 +1,8 @@
-import { TreeWidget } from "../TreeWidget";
+import { TreeWidget, id } from "../TreeWidget";
 import { State, StateRender } from "../State";
 import { flattenState } from "./flattenState";
-
+import { NativeListener, SetNativeListener } from "../listener";
+import { debounce } from "../utils";
 
 export type ExecuteReceivedProps<T = any> = {
     state?: State & T;
@@ -20,16 +21,47 @@ export type Executeprops<T = any> = ExecuteReceivedProps & {
     ) => any;
 };
 
+
+function createStoreState(handler: HandlerListener) {
+    const store = new Map<TreeNative, NativeListener<TreeNative>>();
+    return (parent: TreeNative, state: State) => {
+        if (state && state.superCtx && !store.has(parent)) {
+            store.set(parent, new SetNativeListener([new NativeListener<TreeNative>('changeState', parent, state).addListener(handler)]));
+        } /*else if (state && !state.currentStoreState.superCtx && Array.from(store.get(parent)).some(event => event.target === parent) === false) {
+            store.get(parent).add(new NativeListener<TreeNative>('changeState', parent, state).addListener(handler));
+        }*/ else if (!state) {
+            return store.get(parent);
+        } else if (store.has(parent) && state.superCtx) {
+            store.get(parent).add(new NativeListener<TreeNative>('changeState', parent, state).addListener(handler));
+        }
+    }
+}
+
+export const listener = createStoreState((event) => {
+    event.target.$update(event.data);
+});
+
+const debounceState = (()=> {
+    let call: NativeListener<TreeNative>[];
+    const caller = debounce(() => {
+        const find = call;//calls.findLast(nl => nl.data.superCtx);
+        call = null;
+        if (find) find._invoke();
+    }, 10);
+    
+    return (listListener: SetNativeListener, proxies: State) => {
+        call = listListener._findIn('data', proxies);
+        caller();
+    }
+})();
+
 /**
  * llama a los metodos o propiedades de clase State y devuele su valor
  *
  * Call the State Class Methods or Properties and go out of its value
  */
-function bind(target: State, key: string) {
-    if (typeof target[key] === "function") {
-        return target[key].bind(target);
-    }
-    return target[key];
+function bind(target: State, key: string, component) {
+    return (typeof target[key] === "function") ? target[key].bind(target) : target[key];
 }
 
 /**
@@ -37,32 +69,31 @@ function bind(target: State, key: string) {
  * el valor original de un objecto es devuelto
  * aun no esta implementado el renderizado se estado con Object
  * solo esta permitido: string, number, boolean, array
- *
+ * { use: true }
  * Returns a proxy to handle the data values and rendering of the view The original value of an object is returned
  * not yet implemented the rendering is with Object only this allowed: String, Number, Boolean, Array
  */
 export function useState<TypeData = any, TypeWidget = any>(
     data?: TypeData,
-    reInvokeCtx?: TreeWidget<TypeWidget>
+    reInvokeCtx: TreeWidget<TypeWidget> | boolean = false
 ): TypeData & State {
-    const flatten = reInvokeCtx ? flattenState<TypeData>(reInvokeCtx) : undefined;
-    
+    const component = id.component;
+    const flatten = flattenState<TypeData>(component);
     if (flatten instanceof State) {
         return flatten as TypeData & State;
     }
 
     const proxies = new Proxy(new State(data, reInvokeCtx), {
         get(target, key: string) {
-            if (key === "flatten") return flatten;
             if (key in target) {
-                return bind(target, key);
-            } else if (typeof target.data[key] !== 'undefined') {
+                return key === 'set' && component ? (value: any) => (target.set(value), debounceState(listener(component), proxies)) : bind(target, key, component);
+            } else if (typeof target.value[key] !== 'undefined') {
                 // cuando es un estado que no se añade a la vista retorna el dato original pedido
                 if (
-                    !Array.isArray(target.data) &&
-                    target.data instanceof Object //&& !target.parentNode
+                    !Array.isArray(target.value) &&
+                    target.value instanceof Object //&& !target.parentNode
                 ) {
-                    return target.data[key];
+                    return target.value[key];
                 }
 
                 /**
@@ -73,12 +104,12 @@ export function useState<TypeData = any, TypeWidget = any>(
                  * If the data is a function, returns a function to get new values.
                  * More suitable for Array.map that returns a view
                  */
-                return typeof target.data[key] === "function"
+                return typeof target.value[key] === "function"
                     ? (...args: any[]) => {
-                        const newValue = target.data[key].apply(target.data, args);
+                        const newValue = target.value[key].apply(target.value, args);
                         if (typeof newValue !== 'undefined') {
                             return new StateRender(
-                                target.data[key].apply(target.data, args),
+                                target.value[key].apply(target.value, args),
                                 proxies
                             );
                         }
@@ -90,10 +121,6 @@ export function useState<TypeData = any, TypeWidget = any>(
         },
         set(target, key, newValue) {
             if (key in target) {
-                if (key === "set" || key === "append") {
-
-                }
-
                 target[key] = newValue;
             } else if (key in target.data) {
                 target.data[key] = newValue;
@@ -104,25 +131,38 @@ export function useState<TypeData = any, TypeWidget = any>(
         },
     }) as TypeData & State;
 
-    if (typeof flatten === 'object') {
+    if (typeof flatten === 'object') 
         flatten.queue.push(proxies);
-    }
-
+    listener(component, proxies);
+    
     return proxies;
 }
 
-/**
- * es una funcion envolvente para manejar la ejecucion de un estado
- * y volverlo a renderizar sin tener que llamarse a todo el componente
- *
- * Is an enveloping function to handle the execution of a state
- * And render it again without having to call the whole component
- */
-export function Execute(
-    props: Executeprops | null,
-    children: TreeWidget<any>
-) {
-    const { state, callback, option } = props ?? ({} as Executeprops);
-    if (callback) return callback.call(this, { state, option, children });
-    return children;
+export function createState<Param extends object>(manager: Param): () => ReturnType<typeof useState> {
+    const brig = {};
+
+    const set = (key: string) => (v) => {
+        brig[key].set(v);
+    }
+
+    const get = (key: string) => {
+        let state: typeof useState;
+        return () => {
+            if (!state) {
+                state = useState(manager[key]);
+            }
+            return state;
+        }
+    }
+
+    for (let key in manager) {
+        const defineProperty = typeof manager[key] === 'function' ? { value: manager[key].bind(brig) } : { get: get(key), set: set(key) };
+        Object.defineProperty(brig, key, defineProperty);
+    }
+
+    let state: typeof useState;
+
+    return () => {
+        return state ?? (state = useState(brig));
+    };
 }

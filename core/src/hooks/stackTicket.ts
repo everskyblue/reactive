@@ -19,15 +19,15 @@ export function nextTicket<Type = any>(stack: IStackTicket): Type {
 }
 
 export function createTicket(ctx: TreeWidget<any>): IStackTicket {
-    if (!HookStore.tickets.has(ctx)) {
-        HookStore.tickets.set(ctx, {
+    if (!HookStore.tickets.has(ctx.type)) {
+        HookStore.tickets.set(ctx.type, {
             reInvoke: false,
             ticket: 0,
             queue: [],
         });
     }
     
-    const ticket = HookStore.tickets.get(ctx);
+    const ticket = HookStore.tickets.get(ctx.type);
     
     if (ctx.isReInvoke) {
         ticket.reInvoke = true;

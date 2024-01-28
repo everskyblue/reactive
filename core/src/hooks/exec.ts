@@ -1,11 +1,10 @@
 import { useCallback } from "./useCallback";
 import { HookStore } from "./hookStore";
-import { TreeWidget } from "../TreeWidget";
 
 HookStore.createStore("memo");
 
-export function exec(callback: (...args: any[]) => any, ctx: TreeWidget<any>): typeof callback {
-    const memo = useCallback(callback, ctx);
+export function exec(callback: (...args: any[]) => any): typeof callback {
+    const memo = useCallback(callback);
     
     if (!HookStore.memo.has(memo)) {
         HookStore.memo.set(memo, false);
