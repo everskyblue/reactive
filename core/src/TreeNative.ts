@@ -16,19 +16,19 @@ const ALLOWED_TYPES = ["string", "number", "boolean"];
  *
  * types of data that the component tree can have
  */
-export type TypeChildNode = string | boolean | number | State | TreeWidget<any> | StateRender;
+export type TypeChildNode = string | boolean | number | State | TreeNative<any> | StateRender;
 
 /**
  * type de valores de las etiquetas jsx
  *
  * jsx tag values type
  */
-export type TreeWidgetOfType<AnyWidget> =
+export type TreeNativeOfType<AnyWidget> =
     | string
     | ((
         props: ReactiveProps
         //childs?: TypeChildNode<AnyWidget>
-    ) => TreeWidget<AnyWidget> | TreeWidget<AnyWidget>[]);
+    ) => TreeNative<AnyWidget> | TreeNative<AnyWidget>[]);
 
 export type ReactivePropsWithChild<
     Properties = {}
@@ -53,7 +53,7 @@ export interface UNativeRender<TypeNative = any> {
     get newChilds(): TypeNative[];
     get oldChilds(): TypeNative[];
     getNodeParent(): TypeNative;
-    getParent(): TreeWidget<TypeNative>;
+    getParent(): TreeNative<TypeNative>;
 }
 
 /**
@@ -69,7 +69,7 @@ export interface NativeRender<TypeNative = any> {
     setProperties(parent: TypeNative, props: Record<string, any>): void;
     appendWidget(
         parent: TypeNative,
-        childs: TreeWidget | StateRender | any
+        childs: TreeNative | StateRender | any
     ): void;
     querySelector(selector: string): TypeNative;
     updateWidget(urender: UNativeRender<TypeNative>): void;
@@ -79,19 +79,19 @@ export function _onUpdate<TypeNative = any>(storeState: StoreState<TypeNative>) 
     this.isReInvoke = true;
     id.component = this;
     const parent = this.parentNode;
-    const ctxParentNode: TreeWidget<TypeNative> =
+    const ctxParentNode: TreeNative<TypeNative> =
         typeof this.type === "function" ? getParent(this) : this;
 
     const childs = this.childs;
     // esto es para un estado que no renderiza el componente principal 
-    const acumulator = { findIndex: [], oldChilds: [] };
-    const updateBy = storeState.superCtx ? acumulator : this.childs.reduce((update, child, pos) => {
-        if (/*(child instanceof TreeWidget && this === child) || */(child instanceof State && child.currentStoreState === storeState) || (child instanceof StateRender && child.state.currentStoreState === storeState)) {
+    const accumulator = { findIndex: [], oldChilds: [] };
+    const updateBy = storeState.superCtx ? accumulator : this.childs.reduce((update, child, pos) => {
+        if (/*(child instanceof TreeNative && this === child) || */(child instanceof State && child.currentStoreState === storeState) || (child instanceof StateRender && child.state.currentStoreState === storeState)) {
             update.findIndex.push(pos);
             update.oldChilds.push(child instanceof State ? child.toString() : child.node);
         }
         return update;
-    }, acumulator);
+    }, accumulator);
 
     const newChilds = typeof this.type === 'function' ? this.type.call(this, mergeProperties.call(this, true)) : false
 
@@ -100,7 +100,7 @@ export function _onUpdate<TypeNative = any>(storeState: StoreState<TypeNative>) 
         this.childs = toArray(newChilds);
     }
 
-    if (newChilds instanceof TreeWidget) {
+    if (newChilds instanceof TreeNative) {
         newChilds.isReInvoke = true;
         newChilds.render();
     }
@@ -122,7 +122,7 @@ export function _onUpdate<TypeNative = any>(storeState: StoreState<TypeNative>) 
             }
 
             get newChilds() {
-                return newChilds instanceof StateRender ? newChilds.node : newChilds instanceof TreeWidget ? toArray(newChilds) : oldChild;
+                return newChilds instanceof StateRender ? newChilds.node : newChilds instanceof TreeNative ? toArray(newChilds) : oldChild;
             }
 
             get oldChilds() {
@@ -146,7 +146,7 @@ export function _onUpdate<TypeNative = any>(storeState: StoreState<TypeNative>) 
             }
 
             get newChilds() {
-                return newChilds instanceof StateRender ? newChilds.node : newChilds instanceof TreeWidget ? toArray(newChilds) : newChilds;
+                return newChilds instanceof StateRender ? newChilds.node : newChilds instanceof TreeNative ? toArray(newChilds) : newChilds;
             }
 
             get oldChilds() {
@@ -161,12 +161,12 @@ export const id = {
     component: null
 }
 
-export class TreeWidget<TypeNative = any> {
+export class TreeNative<TypeNative = any> {
     isReInvoke: boolean = false;
 
     node: TypeNative = undefined;
 
-    parentNode: TreeWidget<TypeNative> = undefined;
+    parentNode: TreeNative<TypeNative> = undefined;
 
     childs: TypeChildNode[] = undefined;
 
@@ -174,12 +174,12 @@ export class TreeWidget<TypeNative = any> {
 
     private _ns: boolean = false;
 
-    private _fnparent: TreeWidget = undefined;
+    private _fnparent: TreeNative = undefined;
 
     private _listenerOnCreate: (element: TypeNative | undefined) => any = () => void 0;
 
     constructor(
-        public type: TreeWidgetOfType<TypeNative>,
+        public type: TreeNativeOfType<TypeNative>,
         public properties: Record<string, any>,
         public widgedHelper: NativeRender,
         public originalChilds: TypeChildNode[]
@@ -194,9 +194,9 @@ export class TreeWidget<TypeNative = any> {
         }
 
         for (let child of originalChilds) {
-            if (this._ns && child instanceof TreeWidget)
+            if (this._ns && child instanceof TreeNative)
                 child._ns = true;
-            if (typeof this.type === 'function' && child instanceof TreeWidget)
+            if (typeof this.type === 'function' && child instanceof TreeNative)
                 child._fnparent = this;
         }
 
@@ -240,14 +240,14 @@ export class TreeWidget<TypeNative = any> {
     }
 
     #renderChild() {
-        const ctxWidget: TreeWidget<TypeNative> = this.getNodeWidget();
+        const ctxWidget: TreeNative<TypeNative> = this.getNodeWidget();
 
         for (let child of this.childs) {
-            if (child instanceof TreeWidget || child instanceof State || child instanceof StateRender) {
+            if (child instanceof TreeNative || child instanceof State || child instanceof StateRender) {
                 child.parentNode = this;
             }
             //console.log(child);
-            if (child instanceof TreeWidget) {
+            if (child instanceof TreeNative) {
                 /**
                  * cuando es un componente todos los elementos hace referencia al componente padre
                  */
@@ -279,7 +279,7 @@ export class TreeWidget<TypeNative = any> {
     }
 
     #renderDataState <TypeNative = any>(
-        ctx: TreeWidget<TypeNative>,
+        ctx: TreeNative<TypeNative>,
         parent: TypeNative,
         state: State
     ) {
@@ -289,10 +289,10 @@ export class TreeWidget<TypeNative = any> {
             Array.isArray(storeState.rendering)
         ) {
             (storeState.rendering ?? storeState.data).forEach(
-                (def: TreeWidget<TypeNative>) => {
+                (def: TreeNative<TypeNative>) => {
                     this.widgedHelper.appendWidget(
                         parent,
-                        def instanceof TreeWidget ? def.render().node : def
+                        def instanceof TreeNative ? def.render().node : def
                     );
                 }
             );
@@ -307,7 +307,7 @@ export class TreeWidget<TypeNative = any> {
             : _onUpdate.call(this, storeState);
     }
 
-    render(): TreeWidget {
+    render(): TreeNative {
         id.component = this;
         if (this.node) {
             this.widgedHelper.setProperties(
@@ -340,7 +340,7 @@ export class TreeWidget<TypeNative = any> {
      * si no hay significa que es una funcion
      * buscara el objecto de que representa la vista
      */
-    getNodeWidget(): TreeWidget<TypeNative> {
+    getNodeWidget(): TreeNative<TypeNative> {
         if (typeof this.node === "object") {
             return this;
         }

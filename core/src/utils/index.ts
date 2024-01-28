@@ -1,50 +1,5 @@
-import { TreeWidget, TypeChildNode, _onUpdate } from "../TreeWidget";
-import { exec, flattenState } from "../hooks";
-import { State } from "../State";
-
-/**
- * añade al estado que se esta volviendo a invocar desde el contexto llamado
- * @param state State
- */
-export function setReInvocationState(state: any) {
-    let flatten = state.flatten;
-    if (state.currentStoreState.superCtx && !flatten) {
-        flatten = flattenState<any>(
-            state.currentStoreState.superCtx
-        );
-    }
-
-    if (flatten && !(flatten instanceof State)) flatten.reInvoke = true;
-}
-
-/**
- * reescribe el metodo set y append del estado
- * sirve para actualizar el elemento en el que se a añadido
- */
-export function setListenerStates(states: State[], callback: (state: State) => void = () => {}) {
-    for (const state of states) {
-        const set = state.set.bind(state);
-        state.set = (newValue: any) => {
-            setReInvocationState(state);
-            set(newValue);
-            callback(state);
-        };
-    }
-}
-
-/**
- * añade un estado global al contexto del componente para su actualizacion
- */
-export function implementStates(
-    ctx: TreeWidget<any>,
-    states: State[]
-) {
-    exec(() => {
-        setListenerStates(states, state => {
-            _onUpdate.call(ctx, state.currentStoreState);
-        })
-    }, ctx)();
-}
+import { TreeNative, TypeChildNode, _onUpdate } from "../TreeNative";
+import type { State } from "../State";
 
 /**
  * convierte en un array los elementos
@@ -58,7 +13,7 @@ export function toArray<TypeWidget = any>(
 /**
  * obtiene el elemento, si es un componente obtiene el elemento del padre
  */
-export function getNodeWidgetChild(ctx: TreeWidget<any>) {
+export function getNodeWidgetChild(ctx: TreeNative<any>) {
     if (typeof ctx.type === "string") return toArray(ctx.node);
     return ctx.childs.map(recursive).flat();
 }
@@ -66,7 +21,7 @@ export function getNodeWidgetChild(ctx: TreeWidget<any>) {
 /**
  * busca el nodo de forma recursiva
  */
-export function recursive(ctx: TreeWidget) {
+export function recursive(ctx: TreeNative) {
     if (ctx.node) {
         return ctx.node;
     }
@@ -76,11 +31,11 @@ export function recursive(ctx: TreeWidget) {
 /**
  * iterador de nodos hijosde forma recursiva
  */
-export function each(ctx: TreeWidget) {
+export function each(ctx: TreeNative) {
     const v = [];
     for (const child of ctx.childs) {
         let r = child;
-        if (child instanceof TreeWidget) {
+        if (child instanceof TreeNative) {
             r = recursive(child);
         }
         v.push(r);
@@ -92,8 +47,8 @@ export function each(ctx: TreeWidget) {
  * itera hasta encontrar el elemento padre
  */
 export function getParent<TypeWidget = any>(
-    ctx: TreeWidget<TypeWidget> | State
-): TreeWidget<TypeWidget> | any {
+    ctx: TreeNative<TypeWidget> | State
+): TreeNative<TypeWidget> | any {
     let parent = ctx;
 
     //@ts-ignore
@@ -123,4 +78,25 @@ export function mergeProperties(withChild: boolean = false) {
     }
 
     return props;
+}
+
+export function debounce(fn: Function, timer): ((...args: any[])=> any) {
+    let timeout, params;
+    
+    function clear() {
+        if (timeout) {
+            clearTimeout(timeout);
+            timeout = null;
+        }
+    }
+    
+    return function () {
+        if (timeout) return;
+        params = [this, arguments];
+        timeout = setTimeout(function() {
+            clear();
+            const [ctx, args] = params;
+            fn.apply(ctx, args);
+        }, timer);
+    }
 }

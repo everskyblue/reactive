@@ -1,4 +1,4 @@
-import type { TreeWidget as TreeNative } from "./TreeWidget"
+import type { TreeNative } from "./TreeWidget"
 
 type fnEvent = (data: any, oldData: any) => any;
 type HandlerListener<Target = any> = (target: EventTarget<Target>)=> any;

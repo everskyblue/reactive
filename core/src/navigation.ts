@@ -1,17 +1,17 @@
 import type {
-    TreeWidget,
+    TreeNative,
     ReactivePropsWithChild,
-} from "./TreeWidget";
+} from "./TreeNative";
 import { exec, useState } from "./hooks";
 
 interface RouteProps {
     path: string;
-    render: TreeWidget<any>;
+    render: TreeNative<any>;
 }
 
 let capture: {path: string, params: {[key: string]: string}};
 
-const component = (children: TreeWidget[]) => children.find(child => findRoute(child.properties as any));
+const component = (children: TreeNative[]) => children.find(child => findRoute(child.properties as any));
 
 function findRoute({ path }: RouteProps) {
     const hash =

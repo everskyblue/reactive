@@ -1,4 +1,4 @@
-import { TreeWidget } from "../TreeWidget";
+import type { TreeNative } from "../TreeNative";
 import { HookStore } from "./hookStore";
 
 HookStore.createStore("tickets");
@@ -18,7 +18,7 @@ export function nextTicket<Type = any>(stack: IStackTicket): Type {
     return currentValue;
 }
 
-export function createTicket(ctx: TreeWidget<any>): IStackTicket {
+export function createTicket(ctx: TreeNative<any>): IStackTicket {
     if (!HookStore.tickets.has(ctx.type)) {
         HookStore.tickets.set(ctx.type, {
             reInvoke: false,

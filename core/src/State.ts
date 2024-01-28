@@ -1,4 +1,4 @@
-import { TreeWidget } from "./TreeWidget";
+import type { TreeNative } from "./TreeNative";
 import { listener } from "./hooks/useState";
 
 /**
@@ -14,14 +14,14 @@ export enum StateAction {
 }
 
 export class StateRender {
-    _parentNode: TreeWidget<any> = null;
-    readonly node: TreeWidget<any>[] = null;
+    _parentNode: TreeNative<any> = null;
+    readonly node: TreeNative<any>[] = null;
     
-    constructor(widgets: TreeWidget<any>[], readonly state: State) {
+    constructor(widgets: TreeNative<any>[], readonly state: State) {
         this.node = widgets.map(wg => wg.render());
     }
     
-    set parentNode(parent: TreeWidget<any>) {
+    set parentNode(parent: TreeNative<any>) {
         this._parentNode = parent;
         listener(this.state, parent);
     }
@@ -38,7 +38,7 @@ export class StateRender {
  */
 export class StoreState<TypeWidget> {
     private readonly store: any[] = [];
-    public parentNode: TreeWidget<any>;
+    public parentNode: TreeNative<any>;
 
     /**
      *
@@ -48,7 +48,7 @@ export class StoreState<TypeWidget> {
      */
     constructor(
         data: any,
-        public superCtx: TreeWidget<TypeWidget>,
+        public superCtx: TreeNative<TypeWidget>,
         public TYPE_ACTION: StateAction = StateAction.CREATE
     ) {
         this.data = data;
@@ -112,7 +112,7 @@ export class State<TypeWidget = any> implements Record<string, any> {
      * }
      * ```
      */
-    currentParentNode: TreeWidget<any>;
+    currentParentNode: TreeNative<any>;
 
     /**
      * cada vez se cambie el elemento padre del estado modifica a un nuevo almacenamiento de estado
@@ -123,14 +123,14 @@ export class State<TypeWidget = any> implements Record<string, any> {
      */
     public currentStoreState: StoreState<TypeWidget>;
 
-    public _store: Map<TreeWidget<any>, StoreState<TypeWidget>> =
+    public _store: Map<TreeNative<any>, StoreState<TypeWidget>> =
         new Map();
 
-    public get parentNode(): TreeWidget<any> {
+    public get parentNode(): TreeNative<any> {
         return this.currentParentNode;
     }
     
-    public get superCtx(): TreeWidget<any> {
+    public get superCtx(): TreeNative<any> {
         return this.currentStoreState.superCtx;
     }
     
@@ -143,7 +143,7 @@ export class State<TypeWidget = any> implements Record<string, any> {
      *
      * update the node the status is on
      */
-    public set parentNode(parent: TreeWidget<any>) {
+    public set parentNode(parent: TreeNative<any>) {
         /*this.currentParentNode = parent;
         if (
             typeof this.currentStoreState.parentNode !== "undefined" &&
@@ -172,7 +172,7 @@ export class State<TypeWidget = any> implements Record<string, any> {
 
     constructor(
         data: any,
-        superCtx: TreeWidget<TypeWidget>
+        superCtx: TreeNative<TypeWidget>
     ) {
         this.currentStoreState = new StoreState<TypeWidget>(data, superCtx);
     }

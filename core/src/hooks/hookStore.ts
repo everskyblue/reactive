@@ -1,6 +1,6 @@
-import { TreeWidget } from "../TreeWidget";
+import type { TreeNative } from "../TreeNative";
 
-const store = new Map<string, Map<TreeWidget<any>, any>>();
+const store = new Map<string, Map<TreeNative<any>, any>>();
 
 type Union<T extends IHook> = {
      [P in keyof T]: P extends 'createStore' ? (key: string)=> void : Map<any, any>

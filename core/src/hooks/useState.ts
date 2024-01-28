@@ -1,4 +1,4 @@
-import { TreeWidget, id } from "../TreeWidget";
+import { TreeNative, id } from "../TreeNative";
 import { State, StateRender } from "../State";
 import { flattenState } from "./flattenState";
 import { NativeListener, SetNativeListener } from "../listener";
@@ -17,7 +17,7 @@ export type ExecuteReceivedProps<T = any> = {
 export type Executeprops<T = any> = ExecuteReceivedProps & {
     callback?: (
         properties: ExecuteReceivedProps,
-        childs?: TreeWidget<T>
+        childs?: TreeNative<T>
     ) => any;
 };
 
@@ -75,7 +75,7 @@ function bind(target: State, key: string, component) {
  */
 export function useState<TypeData = any, TypeWidget = any>(
     data?: TypeData,
-    reInvokeCtx: TreeWidget<TypeWidget> | boolean = false
+    reInvokeCtx: TreeNative<TypeWidget> | boolean = false
 ): TypeData & State {
     const component = id.component;
     const flatten = flattenState<TypeData>(component);

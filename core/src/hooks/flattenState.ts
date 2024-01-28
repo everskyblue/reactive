@@ -1,11 +1,7 @@
-import { TreeWidget } from "../TreeWidget";
-import { HookStore } from "./hookStore";
+import type { TreeNative } from "../TreeNative";
 import { IStackTicket, createTicket, nextTicket } from "./stackTicket";
-import { State } from "../State";
 
-HookStore.createStore("states");
-
-export function flattenState<TypeData>(ctx: TreeWidget<any>): IStackTicket | State & TypeData {
+export function flattenState<TypeData>(ctx: TreeNative<any>): IStackTicket | State & TypeData {
     const states = createTicket(ctx);
 
     if (states.reInvoke) {

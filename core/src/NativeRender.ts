@@ -1,6 +1,6 @@
 import { StateAction, StateRender } from "./State";
 import { recursive, getNodeWidgetChild } from "./utils";
-import { TreeWidget, NativeRender as INativeRender } from "./TreeWidget";
+import { TreeNative, NativeRender as INativeRender } from "./TreeNative";
 
 type Element = SVGElement | HTMLElement;
 
@@ -23,7 +23,7 @@ export class NativeRender implements INativeRender {
         if (isNativeWindow) {
             if (typeof nativeChild.type === 'function') return;
             const parentNode = parent.getNodeWidget();
-            const nodes = nativeChild instanceof TreeWidget ? getNodeWidgetChild(nativeChild) : nativeChild instanceof StateRender ? nativeChild.node.map(recursive) : nativeChild;
+            const nodes = nativeChild instanceof TreeNative ? getNodeWidgetChild(nativeChild) : nativeChild instanceof StateRender ? nativeChild.node.map(recursive) : nativeChild;
             if (Array.isArray(nodes))
                 parentNode.node.append(...nodes);
             else

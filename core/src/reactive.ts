@@ -1,10 +1,10 @@
 import {
-    TreeWidget,
-    TreeWidgetOfType,
+    TreeNative,
+    TreeNativeOfType,
     TypeChildNode,
     ReactivePropsWithChild,
     NativeRender,
-} from "./TreeWidget";
+} from "./TreeNative";
 
 let widgedHelper: NativeRender;
 
@@ -45,12 +45,12 @@ export class Reactive {
      * @returns
      */
     static createElement<TypeWidget = any>(
-        type: TreeWidgetOfType<TypeWidget>,
+        type: TreeNativeOfType<TypeWidget>,
         properties: Record<string, any>,
         ...childs: TypeChildNode[]
-    ): TreeWidget<TypeWidget> {
+    ): TreeNative<TypeWidget> {
         const treeWidget = Object.seal(
-            new TreeWidget(type, properties || {}, widgedHelper, childs)
+            new TreeNative(type, properties || {}, widgedHelper, childs)
         );
         treeWidget.createNodeAndChilds();
         return treeWidget;
@@ -68,7 +68,7 @@ export class Reactive {
  */
 export function render<TypeWidget = any>(
     root: string,
-    component: TreeWidget<TypeWidget>
+    component: TreeNative<TypeWidget>
 ) {
     component.node = widgedHelper.querySelector(root);
     component.render();
