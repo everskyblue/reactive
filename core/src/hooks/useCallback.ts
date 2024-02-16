@@ -1,12 +1,11 @@
 import { id } from "../TreeNative";
-import {createTicket, nextTicket} from "./stackTicket";
+import { hook } from "./hookStack";
+
+const callableHook = hook('callback');
 
 export function useCallback(callback: (...args: any[]) => any) {
-    const callbacks = createTicket(id.component);
-    
-    if (callbacks.reInvoke) {
-        return nextTicket(callbacks);
-    }
-
-    return callbacks.queue.push(callback), callback;
+    const ticket = callableHook.stack(id.component.type);
+    return id.component.isReInvoke
+        ? callableHook.nextTicket(ticket)
+        : (ticket.queue.add(callback), callback);
 }

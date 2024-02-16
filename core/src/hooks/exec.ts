@@ -1,19 +1,17 @@
+import { id } from "../TreeNative";
 import { useCallback } from "./useCallback";
-import { HookStore } from "./hookStore";
+import { hook } from "./hookStack";
 
-HookStore.createStore("memo");
+const memoHook = hook('memo');
 
 export function exec(callback: (...args: any[]) => any): typeof callback {
-    const memo = useCallback(callback);
-    
-    if (!HookStore.memo.has(memo)) {
-        HookStore.memo.set(memo, false);
-    }
-
+    const component = id.component;
+    const fn = useCallback(callback);
+    const memo = memoHook.stack(component.type);
     return (...args: any[]) => {
-        if (HookStore.memo.get(memo) === false) {
-            HookStore.memo.set(memo, memo(...args));
+        if (!component.isReInvoke) {
+            memo.map.set(fn, fn(...args));
         }
-        return HookStore.memo.get(memo);
+        return memo.map.get(fn);
     };
 }

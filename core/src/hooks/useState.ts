@@ -1,8 +1,12 @@
 import { TreeNative, id } from "../TreeNative";
-import { State, StateRender } from "../State";
 import { flattenState } from "./flattenState";
 import { NativeListener, SetNativeListener } from "../listener";
 import { debounce } from "../utils";
+import State from "../state/InfoState";
+import createProxy from "../state/briget";
+import { hook } from "./hookStack";
+import debounceState from "./debounceState";
+import briget from "../state/briget";
 
 export type ExecuteReceivedProps<T = any> = {
     state?: State & T;
@@ -20,7 +24,6 @@ export type Executeprops<T = any> = ExecuteReceivedProps & {
         childs?: TreeNative<T>
     ) => any;
 };
-
 
 function createStoreState(handler: HandlerListener) {
     const store = new Map<TreeNative, NativeListener<TreeNative>>();
@@ -41,27 +44,53 @@ export const listener = createStoreState((event) => {
     event.target.$update(event.data);
 });
 
-const debounceState = (()=> {
-    let call: NativeListener<TreeNative>[];
-    const caller = debounce(() => {
-        const find = call;//calls.findLast(nl => nl.data.superCtx);
-        call = null;
-        if (find) find._invoke();
-    }, 10);
-    
-    return (listListener: SetNativeListener, proxies: State) => {
-        call = listListener._findIn('data', proxies);
-        caller();
-    }
-})();
+const hookSG = hook('global-state');
 
-/**
- * llama a los metodos o propiedades de clase State y devuele su valor
- *
- * Call the State Class Methods or Properties and go out of its value
- */
-function bind(target: State, key: string, component) {
-    return (typeof target[key] === "function") ? target[key].bind(target) : target[key];
+const createInfoDesk = (
+    component: TreeNative,
+    scopeState: State.Scope,
+    data: any,
+    reinvoke: boolean,
+) => (
+    new State.InformationDesk(
+        component,
+        scopeState,
+        new State.Value(data, reinvoke),
+        reinvoke
+    )
+);
+
+const getProxy = (
+    infoState: State.InformationDesk,
+    handlerStateValue?: (handlerParam: { debounce: typeof debounceState, infoState: State.InformationDesk, proxy: State.Value }) => any
+) => {
+    return {
+        info: infoState,
+        proxy: createProxy(infoState.state, (debounce, proxy) => {
+            // handler
+            return (newValue: any) => {
+                infoState.state.set(newValue);
+                if (handlerStateValue) handlerStateValue({ debounce, infoState, proxy });
+                else debounce(infoState, proxy);
+            }
+        })
+    }
+}
+
+const newState = (
+    component: TreeNative,
+    scopeState: State.Scope,
+    data: any,
+    reinvoke: boolean,
+    stack?: ReturnType<typeof hook>
+) => {
+    const { proxy } = getProxy(createInfoDesk(component, scopeState, data, reinvoke));
+
+    if (stack) {
+        stack.queue.add(proxy);
+    }
+
+    return proxy;
 }
 
 /**
@@ -79,90 +108,121 @@ export function useState<TypeData = any, TypeWidget = any>(
 ): TypeData & State {
     const component = id.component;
     const flatten = flattenState<TypeData>(component);
-    if (flatten instanceof State) {
-        return flatten as TypeData & State;
+
+    if (typeof flatten === 'function') {
+        return flatten() as TypeData & State;
     }
 
-    const proxies = new Proxy(new State(data, reInvokeCtx), {
-        get(target, key: string) {
-            if (key in target) {
-                return key === 'set' && component ? (value: any) => (target.set(value), debounceState(listener(component), proxies)) : bind(target, key, component);
-            } else if (typeof target.value[key] !== 'undefined') {
-                // cuando es un estado que no se añade a la vista retorna el dato original pedido
-                if (
-                    !Array.isArray(target.value) &&
-                    target.value instanceof Object //&& !target.parentNode
-                ) {
-                    return target.value[key];
-                }
-
-                /**
-                 * si la data es una function, devuele una function
-                 * para obtener sus nuevos valores
-                 * sirve mas para Array.map que retorna una vista
-                 *
-                 * If the data is a function, returns a function to get new values.
-                 * More suitable for Array.map that returns a view
-                 */
-                return typeof target.value[key] === "function"
-                    ? (...args: any[]) => {
-                        const newValue = target.value[key].apply(target.value, args);
-                        if (typeof newValue !== 'undefined') {
-                            return new StateRender(
-                                target.value[key].apply(target.value, args),
-                                proxies
-                            );
-                        }
-                    }
-                    : proxies;
-            } else {
-                throw new Error("error proxy " + key);
-            }
-        },
-        set(target, key, newValue) {
-            if (key in target) {
-                target[key] = newValue;
-            } else if (key in target.data) {
-                target.data[key] = newValue;
-            } else {
-                return false;
-            }
-            return true;
-        },
-    }) as TypeData & State;
-
-    if (typeof flatten === 'object') 
-        flatten.queue.push(proxies);
-    listener(component, proxies);
-    
-    return proxies;
+    return newState(component, State.Scope.LOCAL, data, reInvokeCtx, flatten);
 }
 
-export function createState<Param extends object>(manager: Param): () => ReturnType<typeof useState> {
-    const brig = {};
-
-    const set = (key: string) => (v) => {
-        brig[key].set(v);
-    }
-
-    const get = (key: string) => {
-        let state: typeof useState;
-        return () => {
-            if (!state) {
-                state = useState(manager[key]);
-            }
-            return state;
+export function createState<Param extends object>(manager: Param): (reInvokeCtx: boolean) => ReturnType<typeof newState> {
+    const $manager = Object.create(null);
+    const $update = new Set();
+    const $updateSuper = new Map();
+    let superManager = {};
+    let state;
+    const $keys = Object.keys(manager);
+    let resolveParentState: State.Value[] = [];
+    for (const key of $keys) {
+        const isFn = typeof manager[key] === 'function';
+        
+        if (!isFn) {
+            let $value: any = manager[key];
+            Object.defineProperty($manager, key, {
+                get: ()=> $value,
+                set: (value: any)=> {
+                    $value = value;
+                    state[key] = $value;
+                }
+            })
+        } else {
+            $manager[key] = manager[key].bind($manager);
         }
+        
+        Object.defineProperty(
+            superManager,
+            key,
+            isFn
+                ? {
+                    value: (...args: any[]) => {
+                        $manager[key].apply($manager, args);
+                    }
+                }
+                : {
+                    get: (()=> {
+                        const p = briget(new State.Value($manager[key]), false)
+                        return ()=> p;
+                    })(),
+                    set: (value: any)=> {
+                        superManager[key].set(value)
+                        $update.add(superManager[key])
+                    },
+                }
+        )
     }
-
-    for (let key in manager) {
-        const defineProperty = typeof manager[key] === 'function' ? { value: manager[key].bind(brig) } : { get: get(key), set: set(key) };
-        Object.defineProperty(brig, key, defineProperty);
-    }
-
-    let state: typeof useState;
-
-    return () => {
-        return state ?? (state = useState(brig));
+    
+    const stateValue = new State.Value(superManager, false);
+    state = briget(stateValue, (debounce, proxy)=>{
+        return ({component, invokeCtx, $proxy}) => {
+            const all = $updateSuper.get(state);
+            //console.log(Array.from(all.values()), all.get($proxy),component);
+            all.clear()
+            if (invokeCtx) {
+                debounce(
+                    new State.InformationDesk(
+                        component,
+                        State.Scope.GLOBAL,
+                        stateValue,
+                        invokeCtx
+                    ),
+                    proxy
+                )
+            } else {
+                for (const localState of Array.from($update)) {
+                    debounce(
+                        new State.InformationDesk(
+                            component,
+                            State.Scope.GLOBAL,
+                            localState,
+                            invokeCtx
+                        ),
+                        localState
+                    )
+                }
+                $update.clear();
+            }
+        }
+    });
+    
+    $updateSuper.set(state, new Map());
+    let currentComponent;
+    return (invokeCtx: boolean = true, componentsUseState?: Function[]) => {
+        const component = id.component;
+        /*if (currentComponent !== component) {
+            $updateSuper.get(state).set(component.type, [component,invokeCtx]);
+            currentComponent = component;
+        }
+        */
+        const $proxy = new Proxy(manager, {
+            get(target, key) {
+                if (typeof manager[key] === 'function') {
+                    return (...args: any[]) => {
+                        superManager[key](...args);
+                        state.set({
+                            component,
+                            invokeCtx,
+                            $proxy,
+                            filter: componentsUseState
+                        })
+                    }
+                }
+                return superManager[key];
+            }
+        })
+        
+        //$updateSuper.get(state).set(component.type, [component, invokeCtx])
+        
+        return $proxy;
     };
 }
