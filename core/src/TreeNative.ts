@@ -1,13 +1,11 @@
-import { State, StoreState, StateRender } from "./State";
-import { exec } from "./hooks/exec";
-import { listener } from "./hooks/useState";
+import { StoreState, StateRender } from "./State";
+import State from "./state/InfoState";
 import {
     getNodeWidgetChild,
     getParent,
     mergeProperties,
     toArray,
 } from "./utils";
-import { setListenerStates } from "./utils";
 
 const ALLOWED_TYPES = ["string", "number", "boolean"];
 
@@ -16,7 +14,7 @@ const ALLOWED_TYPES = ["string", "number", "boolean"];
  *
  * types of data that the component tree can have
  */
-export type TypeChildNode = string | boolean | number | State | TreeNative<any> | StateRender;
+export type TypeChildNode = string | boolean | number | State.Value | TreeNative<any> | StateRender;
 
 /**
  * type de valores de las etiquetas jsx
@@ -75,7 +73,7 @@ export interface NativeRender<TypeNative = any> {
     updateWidget(urender: UNativeRender<TypeNative>): void;
 }
 
-export function _onUpdate<TypeNative = any>(storeState: StoreState<TypeNative>) {
+export function _onUpdate<TypeNative = any>(superCtx: boolean, storeState: StoreState<TypeNative>) {
     this.isReInvoke = true;
     id.component = this;
     const parent = this.parentNode;
@@ -85,16 +83,18 @@ export function _onUpdate<TypeNative = any>(storeState: StoreState<TypeNative>) 
     const childs = this.childs;
     // esto es para un estado que no renderiza el componente principal 
     const accumulator = { findIndex: [], oldChilds: [] };
-    const updateBy = storeState.superCtx ? accumulator : this.childs.reduce((update, child, pos) => {
-        if (/*(child instanceof TreeNative && this === child) || */(child instanceof State && child.currentStoreState === storeState) || (child instanceof StateRender && child.state.currentStoreState === storeState)) {
+    const updateBy = superCtx ? accumulator : this.childs?.reduce((update, child, pos) => {
+        if (/*(child instanceof TreeNative && this === child) || */(child instanceof State.Value && child.currentStoreState === storeState) || (child instanceof State.SubRender && child.state.currentStoreState === storeState)) {
             update.findIndex.push(pos);
-            update.oldChilds.push(child instanceof State ? child.toString() : child.node);
+            update.oldChilds.push(child instanceof State.Value ? child.toString() : child.node);
         }
         return update;
     }, accumulator);
 
     const newChilds = typeof this.type === 'function' ? this.type.call(this, mergeProperties.call(this, true)) : false
-
+    //console.log(childs, newChilds);
+    if (typeof newChilds === 'undefined') return;
+    
     if (newChilds !== false) {
         newChilds.parentNode = this;
         this.childs = toArray(newChilds);
@@ -104,7 +104,7 @@ export function _onUpdate<TypeNative = any>(storeState: StoreState<TypeNative>) 
         newChilds.isReInvoke = true;
         newChilds.render();
     }
-
+    
     for (let index = 0; index < updateBy.findIndex.length; index++) {
         const position = updateBy.findIndex[index];
         const oldChild = updateBy.oldChilds[index];
@@ -122,7 +122,7 @@ export function _onUpdate<TypeNative = any>(storeState: StoreState<TypeNative>) 
             }
 
             get newChilds() {
-                return newChilds instanceof StateRender ? newChilds.node : newChilds instanceof TreeNative ? toArray(newChilds) : oldChild;
+                return newChilds instanceof State.SubRender ? newChilds.node : newChilds instanceof TreeNative ? toArray(newChilds) : oldChild;
             }
 
             get oldChilds() {
@@ -146,7 +146,7 @@ export function _onUpdate<TypeNative = any>(storeState: StoreState<TypeNative>) 
             }
 
             get newChilds() {
-                return newChilds instanceof StateRender ? newChilds.node : newChilds instanceof TreeNative ? toArray(newChilds) : newChilds;
+                return newChilds instanceof State.SubRender ? newChilds.node : newChilds instanceof TreeNative ? toArray(newChilds) : newChilds;
             }
 
             get oldChilds() {
@@ -241,9 +241,9 @@ export class TreeNative<TypeNative = any> {
 
     #renderChild() {
         const ctxWidget: TreeNative<TypeNative> = this.getNodeWidget();
-
+        const currentComponent = id.component;
         for (let child of this.childs) {
-            if (child instanceof TreeNative || child instanceof State || child instanceof StateRender) {
+            if (child instanceof TreeNative || child instanceof State.Value || child instanceof State.SubRender) {
                 child.parentNode = this;
             }
             //console.log(child);
@@ -264,18 +264,21 @@ export class TreeNative<TypeNative = any> {
                 }
 
                 if (this.isReInvoke) {
-                    child.createNodeAndChilds();
-                    child.isReInvoke = true;
+                    //if (child.node) this.widgedHelper.resetWidgets(getNodeWidgetChild(child));
+                    //child.createNodeAndChilds();
+                    //child.isReInvoke = true;
                 }
-
+                
                 child.render();
+                id.component = currentComponent;
                 this.widgedHelper.appendWidget(this, child);
-            } else if (child instanceof StateRender) {
+            } else if (child instanceof State.SubRender) {
                 this.widgedHelper.appendWidget(this, child);
             } else {
-                this.widgedHelper.appendWidget(this, child instanceof State ? (listener(child, this), child.toString()) : child);
+                this.widgedHelper.appendWidget(this, child instanceof State.Value ? child.toString() : child);
             }
         }
+        id.component = null;
     }
 
     #renderDataState <TypeNative = any>(
@@ -310,13 +313,11 @@ export class TreeNative<TypeNative = any> {
     render(): TreeNative {
         id.component = this;
         if (this.node) {
+            this.createNodeAndChilds()
             this.widgedHelper.setProperties(
                 this.node,
                 mergeProperties.call(this)
             );
-            if (this.isReInvoke && this.widgedHelper.resetWidgets) {
-                this.widgedHelper.resetWidgets(getNodeWidgetChild(this));
-            }
         }
 
         if (typeof this.type === "function" && !this.childs) {
@@ -325,13 +326,11 @@ export class TreeNative<TypeNative = any> {
                 this.type.name === "Fragment"
                     ? this.type(merge)
                     : this.type.call(this, merge);
-            this.childs = toArray(child);
+            this.childs = child ? toArray(child) : [];
         }
 
         this.#renderChild();
-
         this._listenerOnCreate(this.node);
-
         return this;
     }
 
@@ -347,7 +346,7 @@ export class TreeNative<TypeNative = any> {
         return getParent(this);
     }
 
-    $update(state: State) {
-        _onUpdate.call(this, state.currentStoreState)
+    $update(isSuperCtx: boolean, state: State) {
+        _onUpdate.call(this, isSuperCtx, state.currentStoreState)
     }
 }

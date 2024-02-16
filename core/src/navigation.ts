@@ -1,15 +1,25 @@
-import type {
+import {
     TreeNative,
     ReactivePropsWithChild,
+    _onUpdate
 } from "./TreeNative";
-import { exec, useState } from "./hooks";
+import { exec, useState, createState } from "./hooks";
+import { mergeProperties } from "./utils";
 
 interface RouteProps {
+    cache?: boolean;
     path: string;
     render: TreeNative<any>;
 }
 
 let capture: {path: string, params: {[key: string]: string}};
+
+export const createNavigationState = ()=> createState({
+    path: '',
+    setPath(path: string) {
+        this.path = path;
+    }
+});
 
 const component = (children: TreeNative[]) => children.find(child => findRoute(child.properties as any));
 
@@ -27,6 +37,7 @@ function findRoute({ path }: RouteProps) {
 export function Routes({
     children,
     notFount,
+    state
 }: ReactivePropsWithChild<any>) {
     const invoke = useState(false);
     const routeState = useState(!invoke.value ? component(children)??notFount : null, true);
@@ -34,9 +45,16 @@ export function Routes({
     exec(() => {
         window.addEventListener("hashchange", () => {
             if (invoke.value === false) invoke.set(true);
-            routeState.set(component(children) ?? notFount);
+            const route = component(children) ?? notFount
+            const findRoute = routeState.currentStoreState.store.some(child => child === route);
+            if (findRoute && route.properties.cache === false) {
+                const { render } = route.properties;
+                route.childs = render.childs = undefined;
+            }
+            
+            routeState.set(route);
         })
-    }, this)();
+    })();
     
     if (!routeState.value.parentNode) {
         routeState.value.parentNode = this;
@@ -47,6 +65,7 @@ export function Routes({
 
 export function Route(props: RouteProps) {
     props.render.parentNode = this;
+    if (typeof props.cache ==='undefined') props.cache = true;
     return props.render;
 }
 

@@ -1,6 +1,7 @@
 import { StateAction, StateRender } from "./State";
 import { recursive, getNodeWidgetChild } from "./utils";
 import { TreeNative, NativeRender as INativeRender } from "./TreeNative";
+import State from "./state/InfoState";
 
 type Element = SVGElement | HTMLElement;
 
@@ -23,11 +24,11 @@ export class NativeRender implements INativeRender {
         if (isNativeWindow) {
             if (typeof nativeChild.type === 'function') return;
             const parentNode = parent.getNodeWidget();
-            const nodes = nativeChild instanceof TreeNative ? getNodeWidgetChild(nativeChild) : nativeChild instanceof StateRender ? nativeChild.node.map(recursive) : nativeChild;
+            const nodes = nativeChild instanceof TreeNative ? getNodeWidgetChild(nativeChild) : nativeChild instanceof State.SubRender ? nativeChild.node.map(recursive) : nativeChild;
             if (Array.isArray(nodes))
-                parentNode.node.append(...nodes);
+                parentNode?.node.append(...nodes);
             else
-                parentNode.node.append(nodes);
+                parentNode?.node.append(nodes);
         }
     }
 
@@ -56,7 +57,7 @@ export class NativeRender implements INativeRender {
             nodeParent.childNodes.item(index).data = newChilds;
         } else {
             newChilds = newChilds.map(child => recursive(child)).flat();
-            oldChilds = oldChilds.map(child => recursive(child)).flat();
+            oldChilds = oldChilds.map(child => recursive(child instanceof State.SubRender ? (child.node[0] || child) : child)).flat();
             const isMayor = newChilds.length > oldChilds.length;
             for (let index = 0; index < newChilds.length; index++) {
                 const element = newChilds[index];
