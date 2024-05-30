@@ -1,7 +1,7 @@
 import { TreeNative, id } from "../TreeNative";
 import { State, StateRender } from "../State";
 import { flattenState } from "./flattenState";
-import { NativeListener, SetNativeListener } from "../listener";
+import { HandlerListener, NativeListener, SetNativeListener } from "../listener";
 import { debounce } from "../utils";
 
 export type ExecuteReceivedProps<T = any> = {
@@ -23,7 +23,7 @@ export type Executeprops<T = any> = ExecuteReceivedProps & {
 
 
 function createStoreState(handler: HandlerListener) {
-    const store = new Map<TreeNative, NativeListener<TreeNative>>();
+    const store = new Map<TreeNative, SetNativeListener>();
     return (parent: TreeNative, state: State) => {
         if (state && state.superCtx && !store.has(parent)) {
             store.set(parent, new SetNativeListener([new NativeListener<TreeNative>('changeState', parent, state).addListener(handler)]));
@@ -42,7 +42,7 @@ export const listener = createStoreState((event) => {
 });
 
 const debounceState = (()=> {
-    let call: NativeListener<TreeNative>[];
+    let call: NativeListener<TreeNative>;
     const caller = debounce(() => {
         const find = call;//calls.findLast(nl => nl.data.superCtx);
         call = null;
@@ -83,10 +83,10 @@ export function useState<TypeData = any, TypeWidget = any>(
         return flatten as TypeData & State;
     }
 
-    const proxies = new Proxy(new State(data, reInvokeCtx), {
+    const proxies = new Proxy(new State(data, reInvokeCtx as any), {
         get(target, key: string) {
             if (key in target) {
-                return key === 'set' && component ? (value: any) => (target.set(value), debounceState(listener(component), proxies)) : bind(target, key, component);
+                return key === 'set' && component ? (value: any) => (target.set(value), debounceState(listener(component, proxies), proxies)) : bind(target, key, component);
             } else if (typeof target.value[key] !== 'undefined') {
                 // cuando es un estado que no se añade a la vista retorna el dato original pedido
                 if (
@@ -122,8 +122,8 @@ export function useState<TypeData = any, TypeWidget = any>(
         set(target, key, newValue) {
             if (key in target) {
                 target[key] = newValue;
-            } else if (key in target.data) {
-                target.data[key] = newValue;
+            } else if (key in target.value) {
+                target.value[key] = newValue;
             } else {
                 return false;
             }
@@ -156,11 +156,11 @@ export function createState<Param extends object>(manager: Param): () => ReturnT
     }
 
     for (let key in manager) {
-        const defineProperty = typeof manager[key] === 'function' ? { value: manager[key].bind(brig) } : { get: get(key), set: set(key) };
+        const defineProperty = typeof manager[key] === 'function' ? { value: (manager[key] as any).bind(brig) } : { get: get(key), set: set(key) };
         Object.defineProperty(brig, key, defineProperty);
     }
 
-    let state: typeof useState;
+    let state: ReturnType<typeof useState>;
 
     return () => {
         return state ?? (state = useState(brig));

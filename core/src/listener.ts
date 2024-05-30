@@ -1,7 +1,7 @@
-import type { TreeNative } from "./TreeWidget"
+import type { TreeNative } from "./TreeNative"
 
-type fnEvent = (data: any, oldData: any) => any;
-type HandlerListener<Target = any> = (target: EventTarget<Target>)=> any;
+export type fnEvent = (data: any, oldData: any) => any;
+export type HandlerListener<Target = any> = (target: EventTarget<Target>)=> any;
 
 export class MapListeners extends Map implements Pick<string, any> {
     [key: string]: any;

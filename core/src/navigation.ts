@@ -36,7 +36,7 @@ export function Routes({
             if (invoke.value === false) invoke.set(true);
             routeState.set(component(children) ?? notFount);
         })
-    }, this)();
+    })();
     
     if (!routeState.value.parentNode) {
         routeState.value.parentNode = this;

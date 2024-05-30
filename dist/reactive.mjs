@@ -170,7 +170,7 @@ class l {
     this.state = n, this._parentNode = null, this.node = null, this.node = e.map((r) => r.render());
   }
   set parentNode(e) {
-    this._parentNode = e, m(this.state, e);
+    this._parentNode = e, m(e, this.state);
   }
   get parentNode() {
     return this._parentNode;

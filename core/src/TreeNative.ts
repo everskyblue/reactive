@@ -1,5 +1,4 @@
 import { State, StoreState, StateRender } from "./State";
-import { exec } from "./hooks/exec";
 import { listener } from "./hooks/useState";
 import {
     getNodeWidgetChild,
@@ -7,7 +6,6 @@ import {
     mergeProperties,
     toArray,
 } from "./utils";
-import { setListenerStates } from "./utils";
 
 const ALLOWED_TYPES = ["string", "number", "boolean"];
 
@@ -223,13 +221,13 @@ export class TreeNative<TypeNative = any> {
      * comprueba si son datos crudos
      */
     #isStringableState(state: State) {
-        if (Array.isArray(state.data)) {
+        if (Array.isArray(state.value)) {
             return (
-                (state.data as any[]).some((data) => typeof data === "object") ===
+                (state.value as any[]).some((data) => typeof data === "object") ===
                 false
             );
         }
-        return ALLOWED_TYPES.includes(typeof state.data);
+        return ALLOWED_TYPES.includes(typeof state.value);
     }
 
     createNodeAndChilds() {
@@ -273,7 +271,7 @@ export class TreeNative<TypeNative = any> {
             } else if (child instanceof StateRender) {
                 this.widgedHelper.appendWidget(this, child);
             } else {
-                this.widgedHelper.appendWidget(this, child instanceof State ? (listener(child, this), child.toString()) : child);
+                this.widgedHelper.appendWidget(this, child instanceof State ? (listener(this, child), child.toString()) : child);
             }
         }
     }

@@ -23,7 +23,7 @@ export class StateRender {
     
     set parentNode(parent: TreeNative<any>) {
         this._parentNode = parent;
-        listener(this.state, parent);
+        listener(parent, this.state);
     }
     
     get parentNode() {
