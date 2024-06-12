@@ -240,9 +240,15 @@ export class TreeNative<TypeNative = any> {
     #renderChild() {
         const ctxWidget: TreeNative<TypeNative> = this.getNodeWidget();
 
-        for (let child of this.childs) {
+        for (let index = 0, child; child = this.childs[index] && child < this.childs.length; index++) {
             if (child instanceof TreeNative || child instanceof State || child instanceof StateRender) {
                 child.parentNode = this;
+                 if (!(child instanceof TreeNative)) {
+                    ('state' in child ? child.state : child).handlers.push(() => {
+                        console.log(index);
+                        
+                    })
+                 }
             }
             //console.log(child);
             if (child instanceof TreeNative) {
@@ -276,7 +282,7 @@ export class TreeNative<TypeNative = any> {
         }
     }
 
-    #renderDataState <TypeNative = any>(
+    /* #renderDataState <TypeNative = any>(
         ctx: TreeNative<TypeNative>,
         parent: TypeNative,
         state: State
@@ -297,7 +303,7 @@ export class TreeNative<TypeNative = any> {
         } else {
             this.widgedHelper.appendWidget(parent, state);
         }
-    }
+    } */
 
     #reRender(storeState: StoreState<TypeNative>) {
         return storeState.superCtx

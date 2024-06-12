@@ -94,6 +94,8 @@ export class StoreState<TypeWidget> {
 export class State<TypeWidget = any> implements Record<string, any> {
     proxySelf: State;
 
+    handlers: Function[] = [];
+
     /**
      * se actualiza cada vez que el estado es añadido a un elemento
      *
